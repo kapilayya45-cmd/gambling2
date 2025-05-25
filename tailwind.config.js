@@ -8,7 +8,12 @@ module.exports = {
   ],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+        backgroundImage: {
+            // name it whatever makes sense for your pages
+            'home-bg': "url('/images/home-bg.jpg')",
+        },
+    },
   },
   plugins: [],
 } 

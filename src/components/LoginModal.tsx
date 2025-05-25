@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import Button from './Button';
 import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'next/router';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -7,19 +9,24 @@ interface LoginModalProps {
   onSwitchToSignup: () => void;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToSignup }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ 
+  isOpen, 
+  onClose,
+  onSwitchToSignup
+}) => {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [forgotPassword, setForgotPassword] = useState(false);
-  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const { login } = useAuth();
 
-  const { login, resetPassword } = useAuth();
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
     if (!email || !password) {
       return setError('Please fill in all fields');
     }
@@ -29,153 +36,106 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToSign
       setLoading(true);
       await login(email, password);
       onClose();
+      // Redirect to home page
+      router.push('/home');
     } catch (error: any) {
-      setError(error.message || 'Failed to log in');
+      setError(error.code === 'auth/invalid-credential' 
+        ? 'Invalid email or password'
+        : error.message || 'Failed to log in');
     } finally {
       setLoading(false);
     }
   };
-
-  const handleResetPassword = async () => {
-    if (!email) {
-      return setError('Please enter your email address');
-    }
-
-    try {
-      setError('');
-      setLoading(true);
-      await resetPassword(email);
-      setResetEmailSent(true);
-    } catch (error: any) {
-      setError(error.message || 'Failed to send password reset email');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="absolute inset-0 bg-black bg-opacity-75" onClick={onClose}></div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-gray-800 bg-opacity-75 backdrop-blur-sm"
+        onClick={onClose}
+      />
       
-      <div className="bg-[#1a1f2c] rounded-lg p-6 w-full max-w-md mx-4 z-10">
-        <button 
-          className="absolute top-4 right-4 text-gray-400 hover:text-white"
-          onClick={onClose}
-        >
-          ✕
-        </button>
-
-        <h2 className="text-2xl font-bold text-white mb-6">
-          {forgotPassword ? 'Reset Password' : 'Login to Your Account'}
-        </h2>
+      {/* Modal Card */}
+      <div className="relative bg-[#1a1f2c] w-full max-w-md rounded-lg shadow-xl p-8 z-10">
+        <h2 className="text-2xl font-bold text-white mb-6">Log In to Your Account</h2>
         
         {error && (
           <div className="bg-red-500 bg-opacity-20 text-red-200 p-3 rounded mb-4 text-sm">
             {error}
           </div>
         )}
-
-        {resetEmailSent && (
-          <div className="bg-green-500 bg-opacity-20 text-green-200 p-3 rounded mb-4 text-sm">
-            Password reset email sent. Please check your inbox.
-          </div>
-        )}
-
-        {forgotPassword ? (
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <div className="mb-4">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
-                Email Address
-              </label>
+            <label htmlFor="email" className="block text-gray-300 text-sm font-medium mb-1">
+              Email Address
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 bg-white text-gray-800 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="password" className="block text-gray-300 text-sm font-medium mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 bg-white text-gray-800 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
               <input
-                type="email"
-                id="email"
-                className="w-full bg-[#2a3040] text-white rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
+                id="remember-me"
+                type="checkbox"
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded bg-white"
               />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
+                Remember me
+              </label>
             </div>
             
-            <div className="flex space-x-2 mt-6">
-              <button
-                type="button"
-                className="flex-1 px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
-                onClick={() => setForgotPassword(false)}
-                disabled={loading}
-              >
-                Back to Login
-              </button>
-              <button
-                type="button"
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                onClick={handleResetPassword}
-                disabled={loading}
-              >
-                {loading ? 'Sending...' : 'Send Reset Email'}
-              </button>
+            <div className="text-sm">
+              <a href="#" className="text-purple-400 hover:text-purple-300">
+                Forgot your password?
+              </a>
             </div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                className="w-full bg-[#2a3040] text-white rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                className="w-full bg-[#2a3040] text-white rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-              />
-            </div>
-            
-            <button
+          
+          <Button
+            type="submit"
+            className="w-full py-3 mt-6 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md"
+            disabled={loading}
+          >
+            {loading ? 'Logging in...' : 'Log In'}
+          </Button>
+        </form>
+        
+        <div className="mt-6 text-center">
+          <p className="text-gray-400">
+            Don't have an account?{' '}
+            <button 
               type="button"
-              className="text-sm text-blue-400 hover:text-blue-300 mb-4"
-              onClick={() => setForgotPassword(true)}
+              onClick={onSwitchToSignup}
+              className="text-purple-400 hover:text-purple-300 focus:outline-none"
             >
-              Forgot password?
+              Register
             </button>
-            
-            <button
-              type="submit"
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors mb-4"
-              disabled={loading}
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-            
-            <div className="text-center text-gray-400 text-sm">
-              Don&apos;t have an account?{' '}
-              <button
-                type="button"
-                className="text-blue-400 hover:text-blue-300"
-                onClick={onSwitchToSignup}
-              >
-                Sign Up
-              </button>
-            </div>
-          </form>
-        )}
+          </p>
+        </div>
       </div>
     </div>
   );

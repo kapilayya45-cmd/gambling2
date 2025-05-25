@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="210" viewBox="0 0 240 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield Shape with Dark Background -->
+  <path d="M120 10L220 50V120C220 160 180 195 120 200C60 195 20 160 20 120V50L120 10Z" fill="#151518" fillOpacity="0.9" stroke="#8A2BE2" strokeWidth="2" filter="drop-shadow(0 0 5px #8A2BE2)" />
+  
+  <!-- Outer Glow Effect -->
+  <path d="M120 15L215 53V118C215 156 177 189 120 194C63 189 25 156 25 118V53L120 15Z" stroke="#FF00FF" strokeWidth="1" strokeOpacity="0.5" />
+  
+  <!-- Playing Cards -->
+  <!-- Heart Card -->
+  <rect x="80" y="45" width="30" height="45" rx="2" fill="#222" stroke="#FF69B4" strokeWidth="1.5" />
+  <path d="M95 65C98 60 101 60 103 65C105 70 95 75 95 75C95 75 85 70 87 65C89 60 92 60 95 65Z" fill="#FF69B4" />
+  <text x="87" y="58" fontFamily="Arial" fontSize="8" fontWeight="bold" fill="white">A</text>
+  <text x="103" y="85" fontFamily="Arial" fontSize="8" fontWeight="bold" fill="white">A</text>
+  
+  <!-- Spade Card -->
+  <rect x="105" y="40" width="30" height="45" rx="2" fill="#222" stroke="white" strokeWidth="1.5" />
+  <path d="M120 55C123 60 126 70 120 70C114 70 117 60 120 55Z" fill="white" />
+  <path d="M120 70L118 75H122L120 70Z" fill="white" />
+  <text x="112" y="53" fontFamily="Arial" fontSize="8" fontWeight="bold" fill="white">A</text>
+  <text x="128" y="80" fontFamily="Arial" fontSize="8" fontWeight="bold" fill="white">A</text>
+  
+  <!-- Club Card -->
+  <rect x="130" y="45" width="30" height="45" rx="2" fill="#222" stroke="#00FFFF" strokeWidth="1.5" />
+  <path d="M145 65C147 65 149 67 149 69C149 71 147 72 146 72C147 74 147 76 145 76C143 76 143 74 144 72C143 72 141 71 141 69C141 67 143 65 145 65Z" fill="#00FFFF" />
+  <text x="137" y="58" fontFamily="Arial" fontSize="8" fontWeight="bold" fill="white">A</text>
+  <text x="153" y="85" fontFamily="Arial" fontSize="8" fontWeight="bold" fill="white">A</text>
+  
+  <!-- FOXXY Text -->
+  <text x="120" y="115" fontFamily="Arial" fontSize="28" fontWeight="bold" fill="white" textAnchor="middle" filter="drop-shadow(0 0 3px #FF00FF)">FOXXY</text>
+  
+  <!-- L4 Text -->
+  <text x="120" y="140" fontFamily="Arial" fontSize="16" fontWeight="bold" fill="#FF69B4" textAnchor="middle" filter="drop-shadow(0 0 2px #FF00FF)">L4</text>
+  
+  <!-- Horizontal Lines -->
+  <line x1="65" y1="155" x2="175" y2="155" stroke="#FF00FF" strokeWidth="2" />
+  <line x1="55" y1="165" x2="185" y2="165" stroke="#8A2BE2" strokeWidth="2" />
+</svg> 

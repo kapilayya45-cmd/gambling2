@@ -1,94 +1,179 @@
-import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/firebase/config';
+// src/components/AdminLogin.tsx
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { auth, db } from '@/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
 import Button from './Button';
 
-interface AdminLoginProps {
-  onSuccess: () => void;
-}
-
-const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
-  const [email, setEmail] = useState('');
+const AdminLogin: React.FC = () => {
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [error, setError]       = useState<string>();
+  const [loading, setLoading]   = useState(false);
+  const router = useRouter();
 
+  // Enable dev mode admin access
+  useEffect(() => {
+    // Only in development mode, add a way to enable admin access
+    if (process.env.NODE_ENV === 'development') {
+      // Add event listener for a special key combination (Ctrl+Shift+A)
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+          console.log('Development admin mode activated');
+          localStorage.setItem('devAdminOverride', 'true');
+          sessionStorage.setItem('demoAdminLogin', 'true');
+          router.push('/admin');
+        }
+      };
+      
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [router]);
+
+  // Check for development override
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      if (localStorage.getItem('devAdminOverride') === 'true') {
+        console.log('Development admin override is active');
+      }
+    }
+  }, []);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setError(undefined);
+
     if (!email || !password) {
-      setError('Please enter both email and password');
+      setError('Please enter both email and password.');
       return;
     }
-    
-    if (!auth) {
-      setError('Authentication service is not available');
-      return;
-    }
-    
+
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      
-      await signInWithEmailAndPassword(auth, email, password);
-      onSuccess();
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+
+      try {
+        // Verify admin role in Firestore 'users' collection
+        const adminRef = doc(db, 'users', user.uid);
+        const adminSnap = await getDoc(adminRef);
+        console.log('Firestore doc path:', `users/${user.uid}`);
+        console.log('Document exists?', adminSnap.exists());
+        console.log('Document data:', adminSnap.data());
+        
+        if (!adminSnap.exists() || adminSnap.data().role !== 'admin') {
+          await signOut(auth);
+          setError('Access denied. You are not an administrator.');
+          return;
+        }
+      } catch (firestoreError) {
+        console.error('Firestore permission error:', firestoreError);
+        
+        // DEVELOPMENT MODE ONLY - Allow specific test emails for development
+        if (process.env.NODE_ENV !== 'production' && email === 'admin@example.com') {
+          console.log('DEVELOPMENT MODE: Bypassing Firestore permission check for admin@example.com');
+          // Set session storage flag for development admin
+          sessionStorage.setItem('demoAdminLogin', 'true');
+          router.push('/admin');
+          return;
+        }
+        
+        await signOut(auth);
+        setError('Database permission error. Contact the administrator.');
+        return;
+      }
+
+      router.push('/admin');
     } catch (err: any) {
-      console.error('Admin login error:', err);
-      setError(err.message || 'Failed to login. Please check your credentials.');
+      console.error('Firebase login error:', err);
+      switch (err.code) {
+        case 'auth/invalid-email':
+          setError('Invalid email format.');
+          break;
+        case 'auth/user-disabled':
+          setError('This account has been disabled.');
+          break;
+        case 'auth/user-not-found':
+          setError('No account found with this email.');
+          break;
+        case 'auth/wrong-password':
+          setError('Incorrect password.');
+          break;
+        case 'auth/too-many-requests':
+          setError('Too many failed login attempts. Please try again later.');
+          break;
+        default:
+          setError(`Login failed: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // DEVELOPMENT ONLY - Helper function to enable admin mode
+  const enableDevAdminMode = () => {
+    if (process.env.NODE_ENV === 'development') {
+      localStorage.setItem('devAdminOverride', 'true');
+      sessionStorage.setItem('demoAdminLogin', 'true');
+      router.push('/admin');
+    }
+  };
+
   return (
-    <div className="w-full max-w-md mx-auto bg-[#1a1f2c] rounded-lg p-6 shadow-lg">
-      <h2 className="text-xl font-bold text-white mb-6 text-center">Admin Login</h2>
-      
+    <div className="max-w-md mx-auto bg-[#1a1f2c] p-6 rounded-lg shadow-lg">
+      <h2 className="text-2xl font-bold text-white text-center mb-6">Admin Login</h2>
       {error && (
-        <div className="bg-red-500 bg-opacity-10 text-red-400 p-3 rounded mb-4 text-sm">
+        <div className="bg-red-600 bg-opacity-20 text-red-400 p-3 rounded mb-4 text-sm">
           {error}
         </div>
       )}
-      
       <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
-            Email
-          </label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-[#2a3040] border border-[#3a4050] rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter admin email"
-          />
-        </div>
-        
-        <div className="mb-6">
-          <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-[#2a3040] border border-[#3a4050] rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter password"
-          />
-        </div>
-        
+        <label className="block text-gray-300 mb-1">Email</label>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          className="w-full mb-4 px-3 py-2 bg-gray-800 border border-[#3a4050] rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          placeholder="admin@example.com"
+        />
+
+        <label className="block text-gray-300 mb-1">Password</label>
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          className="w-full mb-6 px-3 py-2 bg-gray-800 border border-[#3a4050] rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          placeholder="••••••••"
+        />
+
         <Button
           type="submit"
-          className="w-full py-2 bg-blue-600 hover:bg-blue-700"
+          className="w-full bg-purple-600 hover:bg-purple-700"
           disabled={loading}
         >
-          {loading ? 'Signing In...' : 'Sign In'}
+          {loading ? 'Signing in…' : 'Sign In'}
         </Button>
       </form>
+
+      {/* Development shortcut */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-4 text-center">
+          <button 
+            onClick={enableDevAdminMode}
+            className="text-sm text-gray-500 hover:text-gray-300"
+          >
+            DEV MODE: Enable Admin Access
+          </button>
+          <p className="text-xs text-gray-600 mt-1">
+            (Or press Ctrl+Shift+A)
+          </p>
+        </div>
+      )}
     </div>
   );
 };
 
-export default AdminLogin; 
+export default AdminLogin;

@@ -1,26 +1,40 @@
-import React from 'react';
+import React, { ButtonHTMLAttributes } from 'react';
 
-interface ButtonProps {
-  children: React.ReactNode;
-  onClick?: () => void;
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
-  disabled?: boolean;
-  type?: 'button' | 'submit' | 'reset';
 }
 
-const Button: React.FC<ButtonProps> = ({ 
-  children, 
-  onClick, 
+const Button: React.FC<ButtonProps> = ({
+  children,
+  variant = 'primary',
+  size = 'md',
   className = '',
-  disabled = false,
-  type = 'button'
+  ...props
 }) => {
+  const baseStyles = 'inline-flex items-center justify-center rounded-md transition-colors focus:outline-none';
+  
+  // Size styles
+  const sizeStyles = {
+    sm: 'text-sm px-3 py-1.5',
+    md: 'text-base px-4 py-2',
+    lg: 'text-lg px-6 py-3',
+  }[size];
+  
+  // Variant styles
+  const variantStyles = {
+    primary: 'bg-purple-600 hover:bg-purple-700 text-white',
+    secondary: 'bg-gray-800 hover:bg-gray-700 text-white',
+    outline: 'bg-transparent border border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white',
+  }[variant];
+  
+  const combinedClassName = `${baseStyles} ${sizeStyles} ${variantStyles} ${className}`;
+  
   return (
     <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-4 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+      className={combinedClassName}
+      {...props}
     >
       {children}
     </button>

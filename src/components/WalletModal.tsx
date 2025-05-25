@@ -51,7 +51,7 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
   return (
     <>
       <div className="fixed inset-0 flex items-center justify-center z-50">
-        <div className="absolute inset-0 bg-black bg-opacity-75" onClick={onClose}></div>
+        <div className="absolute inset-0 bg-gray-800 bg-opacity-75" onClick={onClose}></div>
         
         <div className="bg-[#1a1f2c] rounded-lg p-6 w-full max-w-md mx-4 z-10">
           <button 
@@ -118,11 +118,11 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
                   Amount
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">$</span>
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-800">$</span>
                   <input
                     type="text"
                     id="amount"
-                    className="w-full bg-[#2a3040] text-white rounded p-3 pl-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white text-gray-800 border border-gray-300 rounded-md p-3 pl-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
@@ -132,7 +132,7 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
               
               <button
                 type="submit"
-                className={`w-full px-4 py-3 rounded text-white transition-colors ${
+                className={`w-full px-4 py-3 rounded-md text-white transition-colors ${
                   transactionType === 'deposit'
                     ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-red-600 hover:bg-red-700'

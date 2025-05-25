@@ -4,7 +4,10 @@ import WalletInfo from './WalletInfo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { db, OfflineError } from '@/firebase/config';
+
+// Payment method type
+type PaymentMethod = 'wallet' | 'coins';
 
 interface BetItem {
   id: string;
@@ -57,10 +60,17 @@ const BetSlip: React.FC = () => {
   const [placingBet, setPlacingBet] = useState<boolean>(false);
   const [betSuccess, setBetSuccess] = useState<boolean>(false);
   const [betError, setBetError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('wallet');
   const emptyMessage = "Your bet slip is empty";
 
   const { currentUser } = useAuth();
-  const { balance: walletBalance, withdraw, getTransactions } = useWallet();
+  const { balance: walletBalance, withdraw, getTransactions, isOffline } = useWallet();
+  
+  // Mock coins balance - in a real app this would come from a context
+  const [coinsBalance, setCoinsBalance] = useState<number>(500);
+
+  // Get the current balance based on payment method
+  const currentBalance = paymentMethod === 'wallet' ? walletBalance : coinsBalance;
 
   // Calculate total odds for accumulator
   const totalOdds = bets.reduce((acc, bet) => acc * bet.odds, 1);
@@ -123,10 +133,24 @@ const BetSlip: React.FC = () => {
     setStakeValues({});
   };
 
+  // Toggle payment method
+  const togglePaymentMethod = () => {
+    setPaymentMethod(prev => prev === 'wallet' ? 'coins' : 'wallet');
+  };
+
   // Format currency
   const formatCurrency = (amount: number): string => {
     return `$${amount.toFixed(2)}`;
   };
+
+  // Listen for offline events to show appropriate error messages
+  useEffect(() => {
+    if (isOffline && paymentMethod === 'wallet') {
+      setBetError('You are currently offline. Some features may be unavailable.');
+    } else {
+      setBetError(null);
+    }
+  }, [isOffline, paymentMethod]);
 
   // Place bet
   const placeBet = async () => {
@@ -140,6 +164,11 @@ const BetSlip: React.FC = () => {
       return;
     }
     
+    if (isOffline && paymentMethod === 'wallet') {
+      setBetError('You are currently offline. Please check your internet connection and try again.');
+      return;
+    }
+    
     // Validate stake amounts
     if (betMode === 'single') {
       if (totalSinglesStake <= 0) {
@@ -147,8 +176,8 @@ const BetSlip: React.FC = () => {
         return;
       }
       
-      if (totalSinglesStake > walletBalance) {
-        setBetError('Insufficient balance');
+      if (totalSinglesStake > currentBalance) {
+        setBetError(`Insufficient ${paymentMethod} balance`);
         return;
       }
     } else { // Multi bet
@@ -157,8 +186,8 @@ const BetSlip: React.FC = () => {
         return;
       }
       
-      if (parseFloat(totalStake) > walletBalance) {
-        setBetError('Insufficient balance');
+      if (parseFloat(totalStake) > currentBalance) {
+        setBetError(`Insufficient ${paymentMethod} balance`);
         return;
       }
     }
@@ -169,8 +198,13 @@ const BetSlip: React.FC = () => {
     setPlacingBet(true);
 
     try {
-      // Withdraw from wallet
-      await withdraw(stakeAmount);
+      if (paymentMethod === 'wallet') {
+        // Withdraw from wallet
+        await withdraw(stakeAmount);
+      } else {
+        // Deduct from coins
+        setCoinsBalance(prev => prev - stakeAmount);
+      }
       
       // Record the bet transaction
       const betDescription = betMode === 'single' 
@@ -187,6 +221,7 @@ const BetSlip: React.FC = () => {
         timestamp: Timestamp.now(),
         description: betDescription,
         status: 'completed',
+        paymentMethod: paymentMethod,
         betDetails: {
           mode: betMode,
           selections: bets.map(bet => ({
@@ -211,7 +246,11 @@ const BetSlip: React.FC = () => {
         setBetSuccess(false);
       }, 3000);
     } catch (error: any) {
-      setBetError(error.message || 'Failed to place bet');
+      if (error instanceof OfflineError) {
+        setBetError('Cannot place bet while offline. Please check your connection.');
+      } else {
+        setBetError(error.message || 'Failed to place bet');
+      }
     } finally {
       setPlacingBet(false);
     }
@@ -249,6 +288,12 @@ const BetSlip: React.FC = () => {
 
       {/* Bet slip content */}
       <div className="flex-1 overflow-y-auto">
+        {isOffline && (
+          <div className="bg-yellow-500 bg-opacity-10 text-yellow-400 p-2 text-xs text-center border-b border-yellow-500 border-opacity-20">
+            You are currently offline. Some features may be unavailable.
+          </div>
+        )}
+        
         {bets.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full px-4 py-8 text-center">
             <svg className="w-12 h-12 text-gray-500 mb-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -271,9 +316,40 @@ const BetSlip: React.FC = () => {
                 </button>
               </div>
 
+              {/* Payment Method Toggle */}
+              <div className="bg-[#2a3040] rounded-md p-3 mb-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-400">Payment Method</span>
+                </div>
+                <div className="flex border border-[#3a4050] rounded-md overflow-hidden">
+                  <button
+                    className={`flex-1 py-2 text-center text-sm transition-colors ${
+                      paymentMethod === 'wallet'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-[#1a1f2c] text-gray-300 hover:bg-[#2a3040]'
+                    }`}
+                    onClick={() => setPaymentMethod('wallet')}
+                  >
+                    Wallet
+                  </button>
+                  <button
+                    className={`flex-1 py-2 text-center text-sm transition-colors ${
+                      paymentMethod === 'coins'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-[#1a1f2c] text-gray-300 hover:bg-[#2a3040]'
+                    }`}
+                    onClick={() => setPaymentMethod('coins')}
+                  >
+                    Coins
+                  </button>
+                </div>
+              </div>
+
               {/* Wallet Info Component */}
               <WalletInfo 
                 totalStake={betMode === 'single' ? totalSinglesStake : parseFloat(totalStake || '0')} 
+                paymentMethod={paymentMethod}
+                coinsBalance={coinsBalance}
               />
 
               {/* Bet selections */}
@@ -406,9 +482,14 @@ const BetSlip: React.FC = () => {
           <Button 
             className="w-full py-3 bg-green-600 hover:bg-green-700 font-medium"
             onClick={placeBet}
-            disabled={placingBet || !currentUser}
+            disabled={
+              placingBet || 
+              !currentUser || 
+              (isOffline && paymentMethod === 'wallet') ||
+              (betMode === 'single' ? totalSinglesStake > currentBalance : parseFloat(totalStake) > currentBalance)
+            }
           >
-            {placingBet ? 'Processing...' : 'Place Bet'}
+            {placingBet ? 'Processing...' : (isOffline && paymentMethod === 'wallet') ? 'Offline' : 'Place Bet'}
           </Button>
           
           {!currentUser && (

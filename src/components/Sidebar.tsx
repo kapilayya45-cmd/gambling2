@@ -1,22 +1,161 @@
 // src/components/Sidebar.tsx
-import React, { useState } from 'react';
+import React, { useCallback, memo, useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useAdmin } from '@/contexts/AdminContext';
-import {
-  CricketIcon,
-  FootballIcon,
-  BasketballIcon,
-  CasinoIcon,
-  TennisIcon,
-  HorseRacingIcon,
-  GreyhoundIcon,
-  LotteryIcon,
-  MultiMarketIcon,
-  AirplaneIcon,
-} from './SportIcons';
+import { useAuth } from '@/contexts/AuthContext';
+// Mock implementation to fix missing module issue
+const fetchLeagueEvents = async () => [];
+const fetchMatches = async () => [];
+const TENNIS_LEAGUES = [
+  { id: '4464', name: 'ATP Tour' },
+  { id: '4517', name: 'WTA Tour' },
+  { id: '4491', name: 'Davis Cup' },
+  { id: '4506', name: 'Fed Cup' },
+  { id: '4481', name: 'Grand Slams' },
+  { id: '4478', name: 'ATP Masters' },
+  { id: '4489', name: 'Exhibition Matches' }
+];
+import { useLeagueStatus } from '@/hooks/useLeagueStatus';
+import { CRICKET_LEAGUES, FOOTBALL_LEAGUES } from '@/constants/leagues';
+import { BASKETBALL_LEAGUES as NEW_BASKETBALL_LEAGUES } from '@/constants/basketballLeagues';
+import { useBasketballStatus } from '@/hooks/useBasketballStatus';
+import { fetchCricketLivescores, CRICKET_TEAM_NAMES } from '@/services/cricketApi';
+
+// Helper function to slugify text for URLs
+const slugify = (text: string): string => {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-')
+    .trim();
+};
+
+// Icons for navigation items
+const FeedIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1M19 8l-7 5-7-5M5 19h14a2 2 0 002-2V9a2 2 0 00-2-2h-1" />
+  </svg>
+);
+
+const BetslipIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+  </svg>
+);
+
+const LiveIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+  </svg>
+);
+
+const CasinoIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+  </svg>
+);
+
+const PromotionsIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+  </svg>
+);
+
+const AdminIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+  </svg>
+);
+
+// Sport Icons
+const SportsIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v8m-4-4h8" />
+  </svg>
+);
+
+const ChevronIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+const NewsIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+  </svg>
+);
+
+const CricketIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+  </svg>
+);
+
+const FootballIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6l4 4 4-4M6 12h12M8 18l4-4 4 4" />
+  </svg>
+);
+
+const BasketballIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07" />
+  </svg>
+);
+
+const TennisIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2C6.5 2 2 6.5 2 12M12 2c5.5 0 10 4.5 10 10M12 22c5.5 0 10-4.5 10-10M12 22C6.5 22 2 17.5 2 12" />
+  </svg>
+);
+
+const HorseRacingIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20l-6-2-6 2V4l6-2 6 2 6-2v16l-6-2z" />
+  </svg>
+);
+
+const GreyhoundIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+  </svg>
+);
+
+const LotteryIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+  </svg>
+);
+
+const MultiMarketIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+);
+
+const AirplaneIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+  </svg>
+);
+
+interface NavigationItem {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  href: string;
+  isLive?: boolean;
+}
 
 interface SportCategory {
-  id: number;
+  id: string;
   name: string;
   icon: React.ReactNode;
   href: string;
@@ -24,87 +163,859 @@ interface SportCategory {
   count?: number;
 }
 
-const sportsCategories: SportCategory[] = [
-  { id: 1, name: 'Cricket', icon: <CricketIcon />, href: '/cricket', isLive: true, count: 24 },
-  { id: 2, name: 'Football', icon: <FootballIcon />, href: '/football', isLive: true, count: 48 },
-  { id: 3, name: 'Basketball', icon: <BasketballIcon />, href: '/basketball', isLive: true, count: 16 },
-  { id: 4, name: 'Live Casino', icon: <CasinoIcon />, href: '/casino', count: 32 },
-  { id: 5, name: 'Tennis', icon: <TennisIcon />, href: '/tennis', count: 12 },
-  { id: 6, name: 'Horse Racing', icon: <HorseRacingIcon />, href: '/horse-racing', count: 8 },
-  { id: 7, name: 'Greyhound Racing', icon: <GreyhoundIcon />, href: '/greyhound', count: 6 },
-  { id: 8, name: 'Lottery', icon: <LotteryIcon />, href: '/lottery', count: 4 },
-  { id: 9, name: 'Multi Markets', icon: <MultiMarketIcon />, href: '/multi-markets', count: 20 },
-  { id: 10, name: 'Vimaan', icon: <AirplaneIcon />, href: '/vimaan', count: 10 },
+// Updated navigation items in the requested order
+const navigationItems: NavigationItem[] = [
+  { id: 'feed', name: 'My Feed', icon: <FeedIcon />, href: '/feed' },
+  { id: 'casino', name: 'Casino', icon: <CasinoIcon />, href: '/casino' },
+  { id: 'betslip', name: 'Betslip', icon: <BetslipIcon />, href: '/betslip' },
+  { id: 'news', name: 'News', icon: <NewsIcon />, href: '/news' },
 ];
 
+const sportsCategories: SportCategory[] = [
+  { id: 'cricket', name: 'Cricket', icon: <CricketIcon />, href: '/cricket', count: 24 },
+  { id: 'football', name: 'Football', icon: <FootballIcon />, href: '/football', count: 48 },
+  { id: 'basketball', name: 'Basketball', icon: <BasketballIcon />, href: '/basketball', count: 16 },
+  { id: 'tennis', name: 'Tennis', icon: <TennisIcon />, href: '/tennis', count: 12 },
+  { id: 'horse-racing', name: 'Horse Racing', icon: <HorseRacingIcon />, href: '/horse-racing', count: 8 },
+  { id: 'greyhound', name: 'Greyhound Racing', icon: <GreyhoundIcon />, href: '/greyhound', count: 6 },
+  { id: 'lottery', name: 'Lottery', icon: <LotteryIcon />, href: '/lottery', count: 4 },
+  { id: 'multi-markets', name: 'Multi Markets', icon: <MultiMarketIcon />, href: '/multi-markets', count: 20 },
+];
+
+// Legacy league constants - can be removed after full migration to SportMonks API
+const OLD_CRICKET_LEAGUES = [
+  { id: '4328', name: 'Ball by Ball' },
+  { id: '4387', name: 'IPL' },
+  { id: '4418', name: 'PSL' },
+  { id: '4419', name: 'County Championship' },
+  { id: '4422', name: 'ICC World Cup' },
+  { id: '4435', name: 'Inter-Provincial' },
+  { id: '4415', name: 'Test Matches' }
+];
+
+const OLD_FOOTBALL_LEAGUES = [
+  { id: '4422', name: 'Romanian Soccer' },
+  { id: '4332', name: 'Italian Soccer' },
+  { id: '4426', name: 'Saudi Soccer' },
+  { id: '4428', name: 'Danish Soccer' },
+  { id: '4339', name: 'Turkish Soccer' },
+  { id: '4347', name: 'Swedish Soccer' },
+  { id: '4422', name: 'Polish Ekstraklasa' },
+  { id: '4335', name: 'Spanish Soccer' },
+  { id: '4328', name: 'English Soccer' },
+  { id: '4351', name: 'Brazilian Soccer' },
+  { id: '4400', name: 'Argentinian Soccer' }
+];
+
+// Other legacy league constants - keep for now
+const BASKETBALL_LEAGUES = [
+  { id: '4487', name: 'French ProA League' },
+  { id: '4387', name: 'NBA' }
+];
+
+const HORSE_RACING_LEAGUES = [
+  { id: '4510', name: 'AUS' },
+  { id: '4512', name: 'RSA' },
+  { id: '4498', name: 'FRA' },
+  { id: '4497', name: 'GB' },
+  { id: '4499', name: 'IRE' }
+];
+
+const GREYHOUND_LEAGUES = [
+  { id: '4520', name: 'AUS' },
+  { id: '4523', name: 'GB' }
+];
+
+// Interface for legacy league status
+interface LegacyLeagueStatus {
+  [key: string]: {
+    inSeason: boolean;
+    live: boolean;
+  };
+}
+
 const Sidebar: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState<number>(1);
+  const router = useRouter();
   const { isAdmin } = useAdmin();
+  const { currentUser } = useAuth();
+  const { status: sportMonksStatus } = useLeagueStatus();
+  const basketballStatus = useBasketballStatus();
+
+  // State for tracking sports section open/closed
+  const [isSportsOpen, setIsSportsOpen] = useState(false);
+  // State for tracking cricket section open/closed
+  const [isCricketOpen, setIsCricketOpen] = useState(false);
+  // State for tracking IPL section open/closed
+  const [isIPLOpen, setIsIPLOpen] = useState(false);
+  // State for tracking football section open/closed
+  const [isFootballOpen, setIsFootballOpen] = useState(false);
+  // State for tracking basketball section open/closed
+  const [isBasketballOpen, setIsBasketballOpen] = useState(false);
+  // State for tracking tennis section open/closed
+  const [isTennisOpen, setIsTennisOpen] = useState(false);
+  // State for tracking horse racing section open/closed
+  const [isHorseOpen, setIsHorseOpen] = useState(false);
+  // State for tracking greyhound racing section open/closed
+  const [isGreyhoundOpen, setIsGreyhoundOpen] = useState(false);
+  
+  // State for Cricket matches
+  const [cricketMatches, setCricketMatches] = useState<string[]>([]);
+  
+  // Legacy status for backward compatibility
+  const [legacyLeagueStatus, setLegacyLeagueStatus] = useState<LegacyLeagueStatus>({});
+
+  // Load upcoming cricket matches
+  useEffect(() => {
+    async function loadMatches() {
+      try {
+        const matches = await fetchMatches(); // returns [{teamA, teamB, date, sport}, …]
+        const upcoming = matches.filter(m =>
+          m.sport === 'cricket' &&
+          (m.date === 'Today' || m.date === 'Tomorrow')
+        );
+
+        // If no matches from API, use fixtures from cricket API
+        if (upcoming.length === 0) {
+          const fixtures = await fetchCricketLivescores();
+          
+          // Filter for IPL matches (assuming league_id 1 is IPL)
+          const iplFixtures = fixtures.filter(match => match.league_id === 1);
+          
+          // Create match labels in "Team A vs Team B" format
+          const labels = iplFixtures.map(match => {
+            const teamA = CRICKET_TEAM_NAMES[match.localteam_id] || `Team ${match.localteam_id}`;
+            const teamB = CRICKET_TEAM_NAMES[match.visitorteam_id] || `Team ${match.visitorteam_id}`;
+            return `${teamA} vs ${teamB}`;
+          });
+          
+          // Get unique labels and limit to 4
+          const uniqueLabels = Array.from(new Set(labels)).slice(0, 4);
+          
+          setCricketMatches(uniqueLabels.length > 0 ? uniqueLabels : [
+            'Mumbai Indians vs Chennai Super Kings',
+            'Royal Challengers Bangalore vs Kolkata Knight Riders',
+            'Delhi Capitals vs Rajasthan Royals',
+            'Sunrisers Hyderabad vs Punjab Kings'
+          ]);
+        } else {
+          // Build unique "Team A vs Team B" labels
+          const labels = upcoming.map(m => `${m.teamA} vs ${m.teamB}`);
+          const uniqueLabels = Array.from(new Set(labels)).slice(0, 4);
+          setCricketMatches(uniqueLabels);
+        }
+      } catch (error) {
+        console.error('Error fetching cricket matches:', error);
+        // Fallback to sample matches if API fails
+        setCricketMatches([
+          'Mumbai Indians vs Chennai Super Kings',
+          'Royal Challengers Bangalore vs Kolkata Knight Riders',
+          'Delhi Capitals vs Rajasthan Royals',
+          'Sunrisers Hyderabad vs Punjab Kings'
+        ]);
+      }
+    }
+    loadMatches();
+  }, []);
+
+  // Load legacy league statuses with mock data instead of API calls
+  useEffect(() => {
+    // Mock data for legacy leagues
+    const mockStatus: typeof legacyLeagueStatus = {};
+    
+    // Add mock status for legacy cricket leagues
+    OLD_CRICKET_LEAGUES.forEach(lg => {
+      mockStatus[lg.id] = {
+        inSeason: true,
+        live: lg.id === '4387', // Make IPL "live" for demonstration
+      };
+    });
+    
+    // Add mock status for legacy football leagues
+    OLD_FOOTBALL_LEAGUES.forEach(lg => {
+      mockStatus[lg.id] = {
+        inSeason: true,
+        live: lg.id === '4328', // Make English Soccer "live" for demonstration
+      };
+    });
+    
+    // Add mock status for other leagues
+    BASKETBALL_LEAGUES.forEach(lg => {
+      mockStatus[lg.id] = {
+        inSeason: true,
+        live: lg.id === '4387', // Make NBA "live" for demonstration
+      };
+    });
+    
+    TENNIS_LEAGUES.forEach(lg => {
+      mockStatus[lg.id] = {
+        inSeason: true,
+        live: lg.id === '4464', // Make ATP "live" for demonstration
+      };
+    });
+    
+    HORSE_RACING_LEAGUES.forEach(lg => {
+      mockStatus[lg.id] = {
+        inSeason: true,
+        live: lg.id === '4497', // Make GB "live" for demonstration
+      };
+    });
+    
+    GREYHOUND_LEAGUES.forEach(lg => {
+      mockStatus[lg.id] = {
+        inSeason: true,
+        live: lg.id === '4520', // Make AUS "live" for demonstration
+      };
+    });
+    
+    setLegacyLeagueStatus(mockStatus);
+  }, []);
+
+  // League IDs to check (example IDs for demonstration)
+  const leagueIds = {
+    cricket: {
+      'ball-by-ball': '4328',
+      'ipl': '4387',
+      'psl': '4418',
+      'county-championship': '4419',
+      'icc-world-cup-league': '4422',
+      'inter-provincial': '4435',
+      'test-matches': '4415'
+    },
+    football: {
+      'romanian-soccer': '4422',
+      'italian-soccer': '4332',
+      'saudi-soccer': '4426',
+      'danish-soccer': '4428',
+      'turkish-soccer': '4339',
+      'swedish-soccer': '4347',
+      'polish-ekstraklasa': '4422',
+      'spanish-soccer': '4335',
+      'english-soccer': '4328',
+      'brazilian-soccer': '4351',
+      'argentinian-soccer': '4400'
+    },
+    basketball: {
+      'french-proa-league': '4487',
+      'nba': '4387'
+    },
+    tennis: {
+      'atp-tour': '4464',
+      'wta-tour': '4517',
+      'davis-cup': '4491',
+      'fed-cup': '4506',
+      'grand-slams': '4481',
+      'atp-masters': '4478',
+      'exhibition-matches': '4489'
+    },
+    'horse-racing': {
+      'aus': '4510',
+      'rsa': '4512',
+      'fra': '4498',
+      'gb': '4497',
+      'ire': '4499'
+    },
+    'greyhound': {
+      'aus': '4520',
+      'gb': '4523'
+    }
+  };
+
+  // Get display name or email for header
+  const userDisplayName = currentUser ? (currentUser.displayName || currentUser.email || 'User') : 'Guest';
+  
+  // Get first letter of username for avatar
+  const userInitial = userDisplayName ? userDisplayName.charAt(0).toUpperCase() : 'G';
+  
+  // Determine active item based on current route
+  const activeItem = router.pathname.substring(1) || 'feed';
+  
+  // Check if any sport is active
+  const isSportActive = Object.keys(leagueIds).some(sport => sport === activeItem);
+
+  // Helper function to render cricket league links from SportMonks API
+  const renderCricketLeague = (lg) => (
+    <li key={lg.id} className="flex items-center px-3 py-2 rounded hover:bg-[#2a3040]">
+      <Link href={`/cricket/${lg.id}`} legacyBehavior>
+        <a className="flex-1 text-gray-300 hover:text-white text-sm">
+          {lg.name}
+        </a>
+      </Link>
+      {sportMonksStatus[lg.id]?.live && (
+        <span className="ml-auto bg-red-500 text-xs text-white px-1 rounded">LIVE</span>
+      )}
+      {!sportMonksStatus[lg.id]?.live && sportMonksStatus[lg.id]?.inSeason && (
+        <span className="ml-auto bg-green-500 text-xs text-white px-1 rounded">IN SEASON</span>
+      )}
+    </li>
+  );
+
+  // Helper function to render football league links from SportMonks API
+  const renderFootballLeague = (lg) => (
+    <li key={lg.id} className="flex items-center px-3 py-2 rounded hover:bg-[#2a3040]">
+      <Link href={`/football/${lg.id}`} legacyBehavior>
+        <a className="flex-1 text-gray-300 hover:text-white text-sm">
+          {lg.name}
+        </a>
+      </Link>
+      {sportMonksStatus[lg.id]?.live && (
+        <span className="ml-auto bg-red-500 text-xs text-white px-1 rounded">LIVE</span>
+      )}
+      {!sportMonksStatus[lg.id]?.live && sportMonksStatus[lg.id]?.inSeason && (
+        <span className="ml-auto bg-green-500 text-xs text-white px-1 rounded">IN SEASON</span>
+      )}
+    </li>
+  );
+
+  // Legacy helper - maintain for backward compatibility for now
+  const getLeagueStatus = (sport: string, leagueKey: string) => {
+    const id = leagueIds[sport]?.[leagueKey];
+    return id ? legacyLeagueStatus[id] : { inSeason: false, live: false };
+  };
+
+  // Legacy helper - maintain for backward compatibility for now
+  const renderLeagueLink = (sport: string, leagueKey: string, leagueName: string) => {
+    const status = getLeagueStatus(sport, leagueKey);
+    
+    return (
+      <li key={leagueKey} className="flex items-center px-3 py-2 rounded hover:bg-[#2a3040]">
+        <Link href={`/${sport}/${leagueKey}`} legacyBehavior>
+          <a className="flex-1 text-gray-300 hover:text-white text-sm">
+            {leagueName}
+          </a>
+        </Link>
+        {status?.live && (
+          <span className="ml-auto bg-red-500 text-xs text-white px-1 rounded">LIVE</span>
+        )}
+        {!status?.live && status?.inSeason && (
+          <span className="ml-auto bg-green-500 text-xs text-white px-1 rounded">IN SEASON</span>
+        )}
+      </li>
+    );
+  };
+
+  // Helper function to render basketball league links
+  const renderBasketballLeague = (lg) => (
+    <li key={lg.id} className="flex items-center px-3 py-2 hover:bg-[#2a3040] rounded">
+      <Link href={`/basketball/${lg.id}`} legacyBehavior>
+        <a className="flex-1 text-gray-300 hover:text-white text-sm">{lg.name}</a>
+      </Link>
+      {basketballStatus[lg.id]?.live ? (
+        <span className="ml-auto bg-red-600 text-xs px-2 py-0.5 rounded">LIVE</span>
+      ) : basketballStatus[lg.id]?.inSeason ? (
+        <span className="ml-auto bg-green-500 text-xs px-2 py-0.5 rounded">IN SEASON</span>
+      ) : null}
+    </li>
+  );
+
+  // Memoized navigation handlers
+  const handleProfileClick = useCallback(() => {
+    router.push('/');
+  }, [router]);
+
+  // Toggle sports section
+  const toggleSportsSection = useCallback(() => {
+    setIsSportsOpen(prev => !prev);
+  }, []);
+
+  // Helper function to toggle the cricket section
+  const toggleCricketOpen = useCallback(() => {
+    setIsCricketOpen(prev => !prev);
+  }, []);
+
+  // Toggle IPL section
+  const toggleIPLOpen = useCallback(() => {
+    setIsIPLOpen(prev => !prev);
+  }, []);
 
   return (
-    <aside className="w-60 bg-[#0f121a] h-full overflow-y-auto hidden md:block shadow-lg">
-      {/* Brand */}
-      <Link
-        href="/"
-        className="block px-4 py-5 border-b border-gray-800 hover:bg-gray-900"
+    <aside className="w-60 bg-black h-full overflow-y-auto hidden md:block shadow-lg">
+      {/* User Profile Area */}
+      <div
+        className="flex items-center px-4 py-5 border-b border-[#2a2a2a] hover:bg-[#0f0f0f] cursor-pointer"
+        onClick={handleProfileClick}
       >
-        <span className="text-2xl font-bold text-white">BetPro</span>
-      </Link>
+        {currentUser ? (
+          <>
+            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
+              {userInitial}
+            </div>
+            <div className="ml-3 overflow-hidden">
+              <p className="text-white font-medium truncate max-w-[160px]">
+                {userDisplayName}
+              </p>
+              {currentUser.email && userDisplayName !== currentUser.email && (
+                <p className="text-xs text-gray-400 truncate max-w-[160px]">
+                  {currentUser.email}
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 5C27 5 33 11 33 20C33 29 27 35 20 35C13 35 7 29 7 20C7 11 13 5 20 5Z" fill="#111" fillOpacity="0.7" stroke="#8A2BE2" strokeWidth="1.5" />
+              <path d="M20 10C25 10 29 14 29 19C29 24 25 28 20 28" stroke="#FF00FF" strokeWidth="1.5" />
+              <path d="M20 10C15 10 11 14 11 19C11 24 15 28 20 28" stroke="#FF69B4" strokeWidth="1.5" />
+              <path d="M14 16L16 18L18 16M22 16L24 18L26 16" stroke="#FF00FF" strokeWidth="1.5" />
+              <path d="M16 20C18 22 22 22 24 20" stroke="#FF69B4" strokeWidth="1.5" />
+              <rect x="10" y="14" width="4" height="6" rx="1" fill="#222" stroke="#FF69B4" strokeWidth="0.5" />
+              <rect x="26" y="14" width="4" height="6" rx="1" fill="#222" stroke="#FF00FF" strokeWidth="0.5" />
+            </svg>
+            <span className="ml-2 text-2xl font-bold text-white">Foxxy</span>
+          </>
+        )}
+      </div>
 
-      {/* Navigation */}
+      {/* Main Navigation */}
       <nav className="px-4 py-6 space-y-4">
-        {sportsCategories.map((sport) => (
-          <Link
-            key={sport.id}
-            href={sport.href}
+        {/* My Feed */}
+        <Link
+          href="/feed"
+          prefetch={true}
+          passHref
+          legacyBehavior
+        >
+          <a 
             className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-              activeCategory === sport.id
-                ? 'bg-[#1f5533] border-l-4 border-[#25b95f] text-white'
-                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              activeItem === 'feed'
+                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
             }`}
-            onClick={() => setActiveCategory(sport.id)}
           >
             <div
               className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                activeCategory === sport.id ? 'bg-[#25b95f]/20' : 'bg-[#1a1f2c]'
+                activeItem === 'feed' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
               }`}
             >
-              {sport.icon}
+              <FeedIcon />
             </div>
-            <span className="font-medium">{sport.name}</span>
-            {sport.isLive ? (
-              <span className="ml-auto bg-[#25b95f] text-xs px-2 py-0.5 rounded">LIVE</span>
-            ) : (
-              sport.count && (
-                <span className="ml-auto text-xs text-gray-500">{sport.count}</span>
-              )
-            )}
-          </Link>
-        ))}
+            <span className="font-medium">My Feed</span>
+          </a>
+        </Link>
+
+        {/* Sports (Collapsible) */}
+        <div>
+          <div 
+            className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+              isSportActive
+                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+            }`}
+            onClick={toggleSportsSection}
+          >
+            <div
+              className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
+                isSportActive ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+              }`}
+            >
+              <SportsIcon />
+            </div>
+            <span className="font-medium">Sports</span>
+            <div className={`ml-auto transform transition-transform duration-200 ${isSportsOpen ? 'rotate-90' : ''}`}>
+              <ChevronIcon />
+            </div>
+          </div>
+
+          {/* Sports Categories (Conditionally Rendered) */}
+          {isSportsOpen && (
+            <div className="mt-1 ml-6 space-y-1">
+              {/* Cricket with two-level nesting (Cricket > IPL > Matches) */}
+              <div>
+                <div
+                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                    activeItem === 'cricket'
+                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                  }`}
+                  onClick={toggleCricketOpen}
+                >
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
+                      activeItem === 'cricket' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                    }`}
+                  >
+                    <CricketIcon />
+                  </div>
+                  <span className="font-medium text-sm">Cricket</span>
+                  <div className={`ml-auto transform transition-transform duration-200 ${isCricketOpen ? 'rotate-90' : ''}`}>
+                    <ChevronIcon />
+                  </div>
+                </div>
+
+                {/* Cricket Sub-Menu */}
+                {isCricketOpen && (
+                  <ul className="pl-4 space-y-1 mt-1">
+                    {/* IPL Sub-Header */}
+                    <li>
+                      <div
+                        className="flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer text-gray-400 hover:bg-[#121212] hover:text-white"
+                        onClick={toggleIPLOpen}
+                      >
+                        <span className="font-medium text-sm">IPL</span>
+                        <div className={`ml-auto transform transition-transform duration-200 ${isIPLOpen ? 'rotate-90' : ''}`}>
+                          <ChevronIcon />
+                        </div>
+                      </div>
+                      
+                      {/* IPL Matches */}
+                      {isIPLOpen && (
+                        <ul className="pl-6 space-y-1 mt-1">
+                          {/* All IPL Matches Link */}
+                          <li className="flex items-center px-3 py-2 rounded hover:bg-[#2a3040]">
+                            <Link href="/cricket/ipl/bet" legacyBehavior>
+                              <a className="flex-1 text-gray-300 hover:text-white text-sm">
+                                All IPL Matches
+                              </a>
+                            </Link>
+                          </li>
+                          
+                          {/* Dynamic cricket match links */}
+                          {cricketMatches.map((match, index) => {
+                            // Extract team names from "Team A vs Team B" format
+                            const teams = match.split(' vs ');
+                            if (teams.length !== 2) return null;
+                            
+                            const teamA = teams[0].trim();
+                            const teamB = teams[1].trim();
+                            
+                            // Create URL-friendly team names for the query parameter
+                            const teamASlug = slugify(teamA);
+                            
+                            return (
+                              <li key={index} className="flex items-center px-3 py-2 rounded hover:bg-[#2a3040]">
+                                <Link href={`/cricket/ipl/bet?team=${teamASlug}`} legacyBehavior>
+                                  <a className="flex-1 text-gray-300 hover:text-white text-sm">
+                                    {match}
+                                  </a>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </li>
+                    
+                    {/* Other Cricket Leagues - Excluding IPL */}
+                    {CRICKET_LEAGUES.filter(league => league.id !== 1).map(renderCricketLeague)}
+                  </ul>
+                )}
+              </div>
+
+              {/* Football with collapsible sub-menu */}
+              <div>
+                <div
+                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                    activeItem === 'football'
+                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                  }`}
+                  onClick={() => setIsFootballOpen(!isFootballOpen)}
+                >
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
+                      activeItem === 'football' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                    }`}
+                  >
+                    <FootballIcon />
+                  </div>
+                  <span className="font-medium text-sm">Football</span>
+                  <div className={`ml-auto transform transition-transform duration-200 ${isFootballOpen ? 'rotate-90' : ''}`}>
+                    <ChevronIcon />
+                  </div>
+                </div>
+
+                {/* Football Leagues Sub-List */}
+                {isFootballOpen && (
+                  <ul className="pl-8 space-y-1 mt-1">
+                    {FOOTBALL_LEAGUES.map(renderFootballLeague)}
+                  </ul>
+                )}
+              </div>
+
+              {/* Basketball with collapsible sub-menu */}
+              <div>
+                <div
+                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                    activeItem === 'basketball'
+                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                  }`}
+                  onClick={() => setIsBasketballOpen(!isBasketballOpen)}
+                >
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
+                      activeItem === 'basketball' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                    }`}
+                  >
+                    <BasketballIcon />
+                  </div>
+                  <span className="font-medium text-sm">Basketball</span>
+                  <div className={`ml-auto transform transition-transform duration-200 ${isBasketballOpen ? 'rotate-90' : ''}`}>
+                    <ChevronIcon />
+                  </div>
+                </div>
+
+                {/* Basketball Leagues Sub-List */}
+                {isBasketballOpen && (
+                  <ul className="pl-8 space-y-1 mt-1">
+                    {NEW_BASKETBALL_LEAGUES.map(renderBasketballLeague)}
+                  </ul>
+                )}
+              </div>
+
+              {/* Tennis with collapsible sub-menu */}
+              <div>
+                <div
+                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                    activeItem === 'tennis'
+                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                  }`}
+                  onClick={() => setIsTennisOpen(!isTennisOpen)}
+                >
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
+                      activeItem === 'tennis' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                    }`}
+                  >
+                    <TennisIcon />
+                  </div>
+                  <span className="font-medium text-sm">Tennis</span>
+                  <div className={`ml-auto transform transition-transform duration-200 ${isTennisOpen ? 'rotate-90' : ''}`}>
+                    <ChevronIcon />
+                  </div>
+                </div>
+
+                {/* Tennis Leagues Sub-List */}
+                {isTennisOpen && (
+                  <ul className="pl-8 space-y-1 mt-1">
+                    {renderLeagueLink('tennis', 'atp-tour', 'ATP Tour')}
+                    {renderLeagueLink('tennis', 'wta-tour', 'WTA Tour')}
+                    {renderLeagueLink('tennis', 'davis-cup', 'Davis Cup')}
+                    {renderLeagueLink('tennis', 'fed-cup', 'Billie Jean King Cup')}
+                    {renderLeagueLink('tennis', 'grand-slams', 'Grand Slams')}
+                    {renderLeagueLink('tennis', 'atp-masters', 'ATP Masters')}
+                    {renderLeagueLink('tennis', 'exhibition-matches', 'Exhibition Matches')}
+                  </ul>
+                )}
+              </div>
+
+              {/* Horse Racing with collapsible sub-menu */}
+              <div>
+                <div
+                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                    activeItem === 'horse-racing'
+                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                  }`}
+                  onClick={() => setIsHorseOpen(!isHorseOpen)}
+                >
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
+                      activeItem === 'horse-racing' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                    }`}
+                  >
+                    <HorseRacingIcon />
+                  </div>
+                  <span className="font-medium text-sm">Horse Racing</span>
+                  <div className={`ml-auto transform transition-transform duration-200 ${isHorseOpen ? 'rotate-90' : ''}`}>
+                    <ChevronIcon />
+                  </div>
+                </div>
+
+                {/* Horse Racing Countries Sub-List */}
+                {isHorseOpen && (
+                  <ul className="pl-8 space-y-1 mt-1">
+                    {renderLeagueLink('horse-racing', 'aus', 'AUS')}
+                    {renderLeagueLink('horse-racing', 'rsa', 'RSA')}
+                    {renderLeagueLink('horse-racing', 'fra', 'FRA')}
+                    {renderLeagueLink('horse-racing', 'gb', 'GB')}
+                    {renderLeagueLink('horse-racing', 'ire', 'IRE')}
+                  </ul>
+                )}
+              </div>
+
+              {/* Greyhound Racing with collapsible sub-menu */}
+              <div>
+                <div
+                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                    activeItem === 'greyhound'
+                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                  }`}
+                  onClick={() => setIsGreyhoundOpen(!isGreyhoundOpen)}
+                >
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
+                      activeItem === 'greyhound' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                    }`}
+                  >
+                    <GreyhoundIcon />
+                  </div>
+                  <span className="font-medium text-sm">Greyhound Racing</span>
+                  <div className={`ml-auto transform transition-transform duration-200 ${isGreyhoundOpen ? 'rotate-90' : ''}`}>
+                    <ChevronIcon />
+                  </div>
+                </div>
+
+                {/* Greyhound Racing Countries Sub-List */}
+                {isGreyhoundOpen && (
+                  <ul className="pl-8 space-y-1 mt-1">
+                    {renderLeagueLink('greyhound', 'aus', 'AUS')}
+                    {renderLeagueLink('greyhound', 'gb', 'GB')}
+                  </ul>
+                )}
+              </div>
+
+              {/* Other sports - keep as is */}
+              {sportsCategories.filter(sport => 
+                sport.id !== 'cricket' && 
+                sport.id !== 'football' && 
+                sport.id !== 'basketball' &&
+                sport.id !== 'tennis' &&
+                sport.id !== 'horse-racing' &&
+                sport.id !== 'greyhound'
+              ).map((sport) => {
+                const isActive = activeItem === sport.id;
+                return (
+                  <Link
+                    key={sport.id}
+                    href={sport.href}
+                    prefetch={true}
+                    passHref
+                    legacyBehavior
+                  >
+                    <a
+                      className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                          : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                      }`}
+                    >
+                      <div
+                        className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
+                          isActive ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                        }`}
+                      >
+                        {sport.icon}
+                      </div>
+                      <span className="font-medium text-sm">{sport.name}</span>
+                      {sport.count && (
+                        <span className="ml-auto text-xs text-gray-500">{sport.count}</span>
+                      )}
+                    </a>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Casino */}
+        <Link
+          href="/casino"
+          prefetch={true}
+          passHref
+          legacyBehavior
+        >
+          <a 
+            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+              activeItem === 'casino'
+                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+            }`}
+          >
+            <div
+              className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
+                activeItem === 'casino' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+              }`}
+            >
+              <CasinoIcon />
+            </div>
+            <span className="font-medium">Casino</span>
+          </a>
+        </Link>
+
+        {/* BetSlip */}
+        <Link
+          href="/betslip"
+          prefetch={true}
+          passHref
+          legacyBehavior
+        >
+          <a 
+            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+              activeItem === 'betslip'
+                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+            }`}
+          >
+            <div
+              className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
+                activeItem === 'betslip' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+              }`}
+            >
+              <BetslipIcon />
+            </div>
+            <span className="font-medium">BetSlip</span>
+          </a>
+        </Link>
+
+        {/* News */}
+        <Link
+          href="/news"
+          prefetch={true}
+          passHref
+          legacyBehavior
+        >
+          <a 
+            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+              activeItem === 'news'
+                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+            }`}
+          >
+            <div
+              className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
+                activeItem === 'news' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+              }`}
+            >
+              <NewsIcon />
+            </div>
+            <span className="font-medium">News</span>
+          </a>
+        </Link>
         
         {/* Admin Link at the bottom - only shown for admin users */}
         {isAdmin && (
           <Link
             href="/admin"
-            className="flex items-center px-3 py-2 rounded-lg transition-colors text-green-400 hover:bg-gray-800 hover:text-green-300 mt-6 border-t border-gray-800 pt-6"
+            prefetch={true}
+            passHref
+            legacyBehavior
           >
-            <div className="flex items-center justify-center w-8 h-8 mr-3 rounded-md bg-[#1a1f2c]">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
-            </div>
-            <span className="font-medium">Admin Dashboard</span>
+            <a 
+              className={`flex items-center px-3 py-2 rounded-lg transition-colors mt-6 border-t border-[#2a2a2a] pt-6 ${
+                activeItem === 'admin'
+                  ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
+                  : 'text-purple-400 hover:bg-[#121212] hover:text-purple-300'
+              }`}
+            >
+              <div
+                className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
+                  activeItem === 'admin' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                }`}
+              >
+                <AdminIcon />
+              </div>
+              <span className="font-medium">Admin Dashboard</span>
+            </a>
           </Link>
         )}
       </nav>
-
-      {/* Promo Card */}
-      <div className="mt-auto p-4 mx-4 bg-gradient-to-r from-green-500 to-teal-400 text-white rounded-lg">
-        <p className="font-semibold">100% Bonus Up to $500</p>
-        <button className="mt-2 w-full bg-white text-[#0f121a] py-1 rounded">Claim Now</button>
-      </div>
     </aside>
   );
 };
 
-export default Sidebar;
+// Memoize the entire component to prevent unnecessary re-renders
+export default memo(Sidebar);

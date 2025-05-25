@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is an admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Base rule - deny all by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // User profiles
+    match /users/{userId} {
+      // Allow users to read their own profile
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      // Allow admins to read all user profiles
+      allow read: if isAdmin();
+      // Allow users to create their own profile
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Allow users to update their own profile, but not change role
+      allow update: if isAuthenticated() && request.auth.uid == userId && 
+                   !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isAdmin']);
+      // Allow admins to update any user profile
+      allow update: if isAdmin();
+    }
+    
+    // Admin collection for admin users
+    match /admins/{userId} {
+      // Allow admins to read/write admin data
+      allow read, write: if isAdmin();
+      // Allow a user to read their own admin document for verification
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Match collection - public data
+    match /matches/{matchId} {
+      // Anyone can read match data
+      allow read: if true;
+      // Only admins can write
+      allow write: if isAdmin();
+    }
+    
+    // Transactions for bets and payments
+    match /transactions/{transactionId} {
+      // Users can read their own transactions
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Admins can read all transactions
+      allow read: if isAdmin();
+      // Allow creation with verification
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Allow admins to update
+      allow update: if isAdmin();
+    }
+    
+    // Settings collection for global settings
+    match /settings/{settingId} {
+      // Anyone can read settings
+      allow read: if true;
+      // Only admins can write settings
+      allow write: if isAdmin();
+    }
+    
+    // Bonus rules collection
+    match /bonusRules/{ruleId} {
+      // Authenticated users can read bonus rules
+      allow read: if isAuthenticated();
+      // Only admins can create, update, or delete bonus rules
+      allow create, update, delete: if isAdmin();
+    }
+  }
+} 

@@ -5,17 +5,30 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { WalletProvider } from '@/contexts/WalletContext';
 import { BetSlipProvider } from '@/contexts/BetSlipContext';
 import { AdminProvider } from '@/contexts/AdminContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      retry: 1,
+    },
+  },
+});
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <AuthProvider>
-      <WalletProvider>
-        <BetSlipProvider>
-          <AdminProvider>
-            <Component {...pageProps} />
-          </AdminProvider>
-        </BetSlipProvider>
-      </WalletProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <WalletProvider>
+          <BetSlipProvider>
+            <AdminProvider>
+              <Component {...pageProps} />
+            </AdminProvider>
+          </BetSlipProvider>
+        </WalletProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 } 

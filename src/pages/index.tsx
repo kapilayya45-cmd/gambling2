@@ -1,41 +1,111 @@
-import React from 'react';
-import Sidebar from '@/components/Sidebar';
-import Header from '@/components/Header';
-import MatchList from '@/components/MatchList';
-import BetSlip from '@/components/BetSlip';
-import Link from 'next/link';
+import React, { useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import Logo from '@/components/Logo';
+import RegistrationModal from '@/components/RegistrationModal';
+import LoginModal from '@/components/LoginModal';
 
 export default function Home() {
+  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  const openRegistrationModal = () => {
+    setIsRegistrationModalOpen(true);
+  };
+
+  const closeRegistrationModal = () => {
+    setIsRegistrationModalOpen(false);
+  };
+
+  const openLoginModal = () => {
+    setIsLoginModalOpen(true);
+    setIsRegistrationModalOpen(false);
+  };
+
+  const closeLoginModal = () => {
+    setIsLoginModalOpen(false);
+  };
+
+  const switchToRegistration = () => {
+    setIsLoginModalOpen(false);
+    setIsRegistrationModalOpen(true);
+  };
+
   return (
-    <>
+    <div className="relative min-h-screen w-full overflow-hidden">
       <Head>
-        <title>BetPro | Sports Betting Platform</title>
-        <meta name="description" content="Place bets on your favorite sports with BetPro" />
+        <title>Foxxy – Live Bets, Big Wins</title>
+        <meta
+          name="description"
+          content="Where Every Play Counts—from edge-of-your-seat matchups to high-stakes casino tables, dive into nonstop action and unbeatable odds."
+        />
       </Head>
-      <div className="flex h-screen bg-[#0f121a] text-white">
-        <Sidebar />
-        <div className="flex-1 flex flex-col">
-          <Header />
-          <div className="flex flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="mb-6 flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Featured Matches</h1>
-                <Link 
-                  href="/api-example"
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-white font-medium transition-colors"
-                >
-                  Try Live API Demo
-                </Link>
-              </div>
-              <MatchList />
-            </div>
-            <div className="w-80 border-l border-gray-700 p-4">
-              <BetSlip />
-            </div>
+
+      {/* Background */}
+      <div className="absolute inset-0 z-0 bg-home-bg bg-cover bg-center brightness-40" />
+
+      {/* Page Content */}
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <header className="flex justify-between items-center px-8 py-6">
+          <div className="flex-shrink-0">
+            <Logo className="w-32 h-28" />
           </div>
-        </div>
+
+          <nav className="flex items-center space-x-8">
+            <Link
+              href="/home"
+              className="text-white text-lg uppercase tracking-wider font-medium border-b-2 border-white px-1 py-1"
+            >
+              HOME
+            </Link>
+            <button
+              onClick={openLoginModal}
+              className="text-white text-lg uppercase tracking-wider font-medium hover:text-gray-300 transition-colors"
+            >
+              LOGIN
+            </button>
+            <Link
+              href="/admin"
+              className="text-white text-lg uppercase tracking-wider font-medium hover:text-gray-300 transition-colors"
+            >
+              ADMIN
+            </Link>
+          </nav>
+        </header>
+
+        <main className="flex-grow flex flex-col items-center justify-center text-center px-4">
+          <h1 className="text-white text-7xl md:text-8xl font-bold mb-8 px-8 py-2 bg-black bg-opacity-40">
+            Live Bets, Big Wins
+          </h1>
+          <p className="text-white text-xl md:text-2xl max-w-4xl mx-auto mb-16 px-8 py-2 bg-black bg-opacity-40 leading-relaxed">
+            Where Every Play Counts—from edge-of-your-seat matchups to high-stakes casino tables, dive into nonstop action and unbeatable odds.
+          </p>
+          <button
+            onClick={openRegistrationModal}
+            className="bg-white text-gray-900 px-16 py-4 text-xl font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors"
+          >
+            Register
+          </button>
+        </main>
+
+        <footer className="py-6 px-8">
+          <p className="text-white text-sm">&copy; 2025. All Rights Reserved.</p>
+        </footer>
       </div>
-    </>
+
+      {/* Registration Modal */}
+      <RegistrationModal 
+        isOpen={isRegistrationModalOpen}
+        onClose={closeRegistrationModal}
+        onSwitchToLogin={openLoginModal}
+      />
+
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={isLoginModalOpen}
+        onClose={closeLoginModal}
+        onSwitchToSignup={switchToRegistration}
+      />
+    </div>
   );
 }
