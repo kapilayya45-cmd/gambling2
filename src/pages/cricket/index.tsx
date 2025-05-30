@@ -10,6 +10,12 @@ import { useLeagueStatus } from '@/hooks/useLeagueStatus';
 export default function CricketIndexPage() {
   const router = useRouter();
   const { status } = useLeagueStatus();
+  
+  const handleAddClick = () => {
+    // For now, just alert - in a real implementation, you would show a modal
+    alert("Add new cricket bet!");
+    // You can implement your modal open logic here
+  };
 
   return (
     <>
@@ -21,7 +27,7 @@ export default function CricketIndexPage() {
       <div className="flex h-screen bg-black text-white overflow-hidden">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
+          <Header onAdd={handleAddClick} />
           <div className="flex-1 overflow-y-auto p-4">
             <div className="mb-6">
               <h1 className="text-2xl font-bold mb-2">Cricket Leagues</h1>

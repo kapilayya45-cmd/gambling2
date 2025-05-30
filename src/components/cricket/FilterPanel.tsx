@@ -7,21 +7,24 @@ interface FilterOption {
 }
 
 interface FilterPanelProps {
-  markets: BettingMarket[];
-  players: FilterOption[];
-  onFilterChange: (filters: {
+  availableMarkets: BettingMarket[];
+  availablePlayers: FilterOption[];
+  activeFilters: {
+    markets: BettingMarket[];
+    players: string[];
+  };
+  onChange: (filters: {
     markets: BettingMarket[];
     players: string[];
   }) => void;
 }
 
 const FilterPanel: React.FC<FilterPanelProps> = ({ 
-  markets, 
-  players, 
-  onFilterChange 
+  availableMarkets, 
+  availablePlayers, 
+  activeFilters,
+  onChange 
 }) => {
-  const [selectedMarkets, setSelectedMarkets] = useState<BettingMarket[]>(markets);
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Market display names 
@@ -36,55 +39,51 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   };
   
   const handleMarketToggle = (market: BettingMarket) => {
-    const updatedMarkets = selectedMarkets.includes(market)
-      ? selectedMarkets.filter(m => m !== market)
-      : [...selectedMarkets, market];
+    const updatedMarkets = activeFilters.markets.includes(market)
+      ? activeFilters.markets.filter(m => m !== market)
+      : [...activeFilters.markets, market];
     
-    setSelectedMarkets(updatedMarkets);
-    onFilterChange({
+    onChange({
       markets: updatedMarkets,
-      players: selectedPlayers
+      players: activeFilters.players
     });
   };
   
   const handlePlayerToggle = (playerId: string) => {
-    const updatedPlayers = selectedPlayers.includes(playerId)
-      ? selectedPlayers.filter(p => p !== playerId)
-      : [...selectedPlayers, playerId];
+    const updatedPlayers = activeFilters.players.includes(playerId)
+      ? activeFilters.players.filter(p => p !== playerId)
+      : [...activeFilters.players, playerId];
     
-    setSelectedPlayers(updatedPlayers);
-    onFilterChange({
-      markets: selectedMarkets,
+    onChange({
+      markets: activeFilters.markets,
       players: updatedPlayers
     });
   };
   
   const clearFilters = () => {
-    setSelectedMarkets(markets);
-    setSelectedPlayers([]);
-    onFilterChange({
-      markets,
+    onChange({
+      markets: availableMarkets,
       players: []
     });
   };
   
   return (
-    <div className="bg-[#0a0d14] border border-[#1a2030] rounded-lg overflow-hidden mb-6">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6 shadow-sm">
       {/* Header */}
       <div 
-        className="bg-black px-4 py-3 border-b border-[#1a2030] flex justify-between items-center cursor-pointer"
+        className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <h3 className="font-medium text-white">Filters</h3>
+        <h3 className="font-medium text-gray-800">Filters</h3>
         <div className="flex items-center">
-          {(selectedMarkets.length < markets.length || selectedPlayers.length > 0) && (
-            <span className="bg-[#25b95f] text-white text-xs rounded-full px-2 py-0.5 mr-2">
-              {(markets.length - selectedMarkets.length) + selectedPlayers.length}
+          {(activeFilters.markets.length < availableMarkets.length || activeFilters.players.length > 0) && (
+            <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5 mr-2">
+              {(availableMarkets.length - activeFilters.markets.length) + activeFilters.players.length}
             </span>
           )}
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
-            className={`h-5 w-5 text-gray-400 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+            className={`h-5 w-5 text-gray-500 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
             fill="none" 
             viewBox="0 0 24 24" 
             stroke="currentColor"
@@ -99,18 +98,18 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         <div className="p-4">
           {/* Markets section */}
           <div className="mb-4">
-            <h4 className="text-sm font-medium text-gray-400 mb-2">Betting Markets</h4>
+            <h4 className="text-sm font-medium text-gray-600 mb-2">Betting Markets</h4>
             <div className="grid grid-cols-2 gap-2">
-              {markets.map(market => (
+              {availableMarkets.map(market => (
                 <div key={market} className="flex items-center">
                   <input
                     type="checkbox"
                     id={`market-${market}`}
-                    checked={selectedMarkets.includes(market)}
+                    checked={activeFilters.markets.includes(market)}
                     onChange={() => handleMarketToggle(market)}
-                    className="mr-2 h-4 w-4 text-[#25b95f] rounded border-[#1a2030] focus:ring-[#25b95f] bg-black"
+                    className="mr-2 h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                   />
-                  <label htmlFor={`market-${market}`} className="text-sm text-white">
+                  <label htmlFor={`market-${market}`} className="text-sm text-gray-700">
                     {MARKET_NAMES[market]}
                   </label>
                 </div>
@@ -120,18 +119,18 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           
           {/* Players section */}
           <div className="mb-4">
-            <h4 className="text-sm font-medium text-gray-400 mb-2">Players</h4>
+            <h4 className="text-sm font-medium text-gray-600 mb-2">Players</h4>
             <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-2">
-              {players.map(player => (
+              {availablePlayers.map(player => (
                 <div key={player.id} className="flex items-center">
                   <input
                     type="checkbox"
                     id={`player-${player.id}`}
-                    checked={selectedPlayers.includes(player.id)}
+                    checked={activeFilters.players.includes(player.id)}
                     onChange={() => handlePlayerToggle(player.id)}
-                    className="mr-2 h-4 w-4 text-[#25b95f] rounded border-[#1a2030] focus:ring-[#25b95f] bg-black"
+                    className="mr-2 h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                   />
-                  <label htmlFor={`player-${player.id}`} className="text-sm text-white truncate">
+                  <label htmlFor={`player-${player.id}`} className="text-sm text-gray-700 truncate">
                     {player.name}
                   </label>
                 </div>
@@ -143,7 +142,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           <div className="flex justify-end">
             <button
               onClick={clearFilters}
-              className="text-sm text-gray-400 hover:text-white px-3 py-1"
+              className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1"
             >
               Clear All
             </button>

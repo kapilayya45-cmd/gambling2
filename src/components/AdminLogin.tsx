@@ -54,7 +54,51 @@ const AdminLogin: React.FC = () => {
 
     setLoading(true);
     try {
-      const { user } = await signInWithEmailAndPassword(auth, email, password);
+      console.log(`Attempting to sign in with email: ${email}`);
+      
+      // Check network connectivity first
+      if (!navigator.onLine) {
+        setError('You appear to be offline. Please check your internet connection.');
+        setLoading(false);
+        return;
+      }
+      
+      // Try auth with error handling
+      let user;
+      try {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        user = result.user;
+        console.log('Authentication successful, user:', user.uid);
+      } catch (authError: any) {
+        console.error('Authentication error:', authError);
+        
+        // Handle network errors specifically
+        if (authError.code === 'auth/network-request-failed') {
+          setError('Network error. This could be due to:' +
+                  '\n1. No internet connection' +
+                  '\n2. Firebase servers unreachable' + 
+                  '\n3. Emulator not running (in development)');
+          
+          // In development, provide additional info for emulator issues
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Development mode: If using emulators, make sure they are running:');
+            console.error('Run: firebase emulators:start');
+            
+            // Allow dev bypass
+            if (email === 'admin@example.com' && password === 'adminpass') {
+              console.log('DEV MODE: Bypassing authentication for admin@example.com');
+              sessionStorage.setItem('demoAdminLogin', 'true');
+              router.push('/admin');
+              return;
+            }
+          }
+          
+          setLoading(false);
+          return;
+        }
+        
+        throw authError; // Re-throw for the outer catch block
+      }
 
       try {
         // Verify admin role in Firestore 'users' collection
@@ -105,6 +149,9 @@ const AdminLogin: React.FC = () => {
         case 'auth/too-many-requests':
           setError('Too many failed login attempts. Please try again later.');
           break;
+        case 'auth/network-request-failed':
+          setError('Network connection error. Please check your internet connection and try again.');
+          break;
         default:
           setError(`Login failed: ${err.message}`);
       }
@@ -126,7 +173,7 @@ const AdminLogin: React.FC = () => {
     <div className="max-w-md mx-auto bg-[#1a1f2c] p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold text-white text-center mb-6">Admin Login</h2>
       {error && (
-        <div className="bg-red-600 bg-opacity-20 text-red-400 p-3 rounded mb-4 text-sm">
+        <div className="bg-red-600 bg-opacity-20 text-red-400 p-3 rounded mb-4 text-sm whitespace-pre-line">
           {error}
         </div>
       )}

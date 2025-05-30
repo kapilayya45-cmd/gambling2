@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { ReactNode, useState } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MatchList from './MatchList';
 import BetSlip from './BetSlip';
 import MobileNav from './MobileNav';
 
-const BettingLayout: React.FC = () => {
+interface BettingLayoutProps {
+  children: ReactNode;
+}
+
+export const BettingLayout: React.FC<BettingLayoutProps> = ({ children }) => {
   const [mobileView, setMobileView] = useState<'matches' | 'sports' | 'betslip'>('matches');
   
   const handleMobileViewChange = (view: 'matches' | 'sports' | 'betslip') => {
@@ -13,7 +17,7 @@ const BettingLayout: React.FC = () => {
   };
   
   return (
-    <div className="flex flex-col h-screen bg-[#0f121a] text-white">
+    <div className="flex flex-col h-screen bg-gray-50 text-gray-800">
       <Header />
       
       <div className="flex flex-1 overflow-hidden">
@@ -24,7 +28,7 @@ const BettingLayout: React.FC = () => {
         
         {/* Main content - always visible on desktop, conditionally on mobile */}
         <div className={`${mobileView === 'matches' ? 'block' : 'hidden'} md:block flex-1`}>
-          <MatchList />
+          {children}
         </div>
         
         {/* BetSlip - always visible on desktop, conditionally on mobile */}

@@ -1,0 +1,192 @@
+/**
+ * Import function triggers from their respective submodules:
+ *
+ * const {onCall} = require("firebase-functions/v2/https");
+ * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ */
+
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+const serviceAccount = require('./firebase-service-account.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+// Create and deploy your first functions
+// https://firebase.google.com/docs/functions/get-started
+
+// exports.helloWorld = onRequest((request, response) => {
+//   logger.info("Hello logs!", {structuredData: true});
+//   response.send("Hello from Firebase!");
+// });
+
+/**
+ * Callable HTTPS function to transfer coins:
+ * - superadmin → only tops up admins
+ * - admin      → only tops up regular users
+ * Uses Admin SDK (bypasses Firestore rules).
+ */
+exports.deployCoins = functions.https.onCall(async (data, context) => {
+  try {
+    console.log('deployCoins function called with data:', data);
+    console.log('Auth context:', context.auth);
+    
+    // 1) Auth check
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'You must be signed in to deploy coins.'
+      );
+    }
+
+    const callerUid = context.auth.uid;
+    console.log('Caller UID:', callerUid);
+    
+    // Check if the token has custom claims
+    console.log('Auth token:', context.auth.token);
+    const callerRole = context.auth.token.role || 'user';
+    console.log('Caller role:', callerRole);
+    
+    const { fromUid, toEmail, amount } = data;
+    console.log('Parsed data:', { fromUid, toEmail, amount });
+
+    // 2) Role check
+    if (callerRole !== 'superadmin' && callerRole !== 'admin') {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Insufficient privileges to deploy coins.'
+      );
+    }
+
+    // Ensure the callerUid matches fromUid
+    if (fromUid !== callerUid) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'You can only deploy coins from your own account.'
+      );
+    }
+
+    // 3) Validate amount
+    if (typeof amount !== 'number' || amount <= 0) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Amount must be a positive number.'
+      );
+    }
+
+    // 4) Load caller's document
+    console.log('Loading caller document:', `users/${callerUid}`);
+    const callerRef = admin.firestore().doc(`users/${callerUid}`);
+    const callerSnap = await callerRef.get();
+    if (!callerSnap.exists) {
+      throw new functions.https.HttpsError(
+        'not-found',
+        'Caller profile not found.'
+      );
+    }
+    const callerData = callerSnap.data();
+    console.log('Caller data:', callerData);
+    
+    const callerBalance = callerData.coinBalance || 0;
+    console.log('Caller balance:', callerBalance);
+
+    // 5) Check balance (skip for superadmins)
+    if (callerRole !== 'superadmin' && callerBalance < amount) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        `Insufficient coins (have ${callerBalance}, need ${amount}).`
+      );
+    }
+
+    // 6) Find recipient by email
+    console.log('Looking up recipient by email:', toEmail);
+    const userQuery = await admin
+      .firestore()
+      .collection('users')
+      .where('email', '==', toEmail)
+      .limit(1)
+      .get();
+
+    if (userQuery.empty) {
+      throw new functions.https.HttpsError(
+        'not-found',
+        `No user found with email "${toEmail}".`
+      );
+    }
+
+    const targetDoc = userQuery.docs[0];
+    const targetData = targetDoc.data();
+    console.log('Target user data:', targetData);
+    
+    const targetRole = targetData.role || 'user';
+    console.log('Target role:', targetRole);
+
+    // 7) Enforce role-based transfer rules
+    if (callerRole === 'superadmin' && targetRole !== 'admin') {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Superadmin may only top up admins.'
+      );
+    }
+    if (callerRole === 'admin' && targetRole !== 'user') {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Admin may only top up regular users.'
+      );
+    }
+
+    // 8) Perform the atomic transaction
+    console.log('Starting transaction');
+    let newBalance;
+    
+    // For superadmins, we only update the recipient's balance, not the superadmin's
+    if (callerRole === 'superadmin') {
+      await admin.firestore().runTransaction(async tx => {
+        // Only update recipient for superadmins (unlimited coins)
+        tx.update(targetDoc.ref, { 
+          coinBalance: admin.firestore.FieldValue.increment(amount),
+          lastTopupBy: callerData.email || 'superadmin',
+          lastTopupAmount: amount,
+          lastTopupTime: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`Increased ${targetDoc.id}'s balance by ${amount}`);
+      });
+      
+      // Superadmins maintain unlimited coins
+      newBalance = Infinity;
+      console.log('Superadmin balance remains unlimited');
+    } else {
+      // Regular admins still have their balance deducted
+      newBalance = await admin.firestore().runTransaction(async tx => {
+        // Update sender
+        tx.update(callerRef, { coinBalance: admin.firestore.FieldValue.increment(-amount) });
+        console.log(`Decreased ${callerUid}'s balance by ${amount}`);
+        
+        // Update recipient
+        tx.update(targetDoc.ref, { 
+          coinBalance: admin.firestore.FieldValue.increment(amount),
+          lastTopupBy: callerData.email || 'admin',
+          lastTopupAmount: amount,
+          lastTopupTime: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`Increased ${targetDoc.id}'s balance by ${amount}`);
+        
+        return callerBalance - amount;
+      });
+    }
+
+    console.log('Transaction completed successfully');
+    console.log('New caller balance:', newBalance);
+
+    // 9) Return the caller's new balance
+    return { 
+      newBalance: callerRole === 'superadmin' ? 'unlimited' : newBalance 
+    };
+  } catch (error) {
+    console.error('Error in deployCoins function:', error);
+    throw error;
+  }
+});

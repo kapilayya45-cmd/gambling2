@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import Button from './Button';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'next/router';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -19,6 +22,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
   const { login } = useAuth();
 
   if (!isOpen) return null;
@@ -34,16 +38,57 @@ const LoginModal: React.FC<LoginModalProps> = ({
     try {
       setError('');
       setLoading(true);
+      setStatusMessage('Logging in...');
+      
+      // For superadmin-like emails, first try with Firebase Auth
+      if (email.includes('admin') || email.includes('super')) {
+        try {
+          // Try direct Firebase Auth first
+          const auth = getAuth();
+          await signInWithEmailAndPassword(auth, email, password);
+          
+          // Successful login
+          onClose();
+          
+          // Check if this is a superadmin
+          const usersRef = collection(db, 'users');
+          const q = query(usersRef, where('email', '==', email));
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            const userData = querySnapshot.docs[0].data();
+            if (userData.role === 'superadmin') {
+              router.push('/superadmin/dashboard');
+            } else if (userData.role === 'admin') {
+              router.push('/admin/dashboard');
+            } else {
+              router.push('/home');
+            }
+          } else {
+            router.push('/home');
+          }
+          
+          return;
+        } catch (authError) {
+          // For admin logins, continue with standard login
+          console.error('Admin login with direct auth failed:', authError);
+        }
+      }
+      
+      // Standard login flow with context
       await login(email, password);
       onClose();
-      // Redirect to home page
       router.push('/home');
     } catch (error: any) {
+      console.error('Login error:', error);
       setError(error.code === 'auth/invalid-credential' 
         ? 'Invalid email or password'
+        : error.code === 'auth/network-request-failed'
+        ? 'Network error. Please check your connection and try again.'
         : error.message || 'Failed to log in');
     } finally {
       setLoading(false);
+      setStatusMessage('');
     }
   };
 
@@ -62,6 +107,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
         {error && (
           <div className="bg-red-500 bg-opacity-20 text-red-200 p-3 rounded mb-4 text-sm">
             {error}
+          </div>
+        )}
+        
+        {statusMessage && !error && (
+          <div className="bg-blue-500 bg-opacity-20 text-blue-200 p-3 rounded mb-4 text-sm">
+            {statusMessage}
           </div>
         )}
         

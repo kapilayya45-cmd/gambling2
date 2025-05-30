@@ -3,7 +3,7 @@
 // src/firebase/config.ts
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getAuth, connectAuthEmulator, browserLocalPersistence, setPersistence, browserSessionPersistence, inMemoryPersistence, AuthError, onAuthStateChanged, getIdToken } from "firebase/auth";
 import { 
   getFirestore, 
   enableMultiTabIndexedDbPersistence, 
@@ -16,9 +16,24 @@ import {
   Firestore,
   FirestoreSettings
 } from "firebase/firestore";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 // Check if we're in a browser environment
 const isBrowser = typeof window !== "undefined";
+
+// Global error handling for Firebase network issues
+if (isBrowser) {
+  window.addEventListener('unhandledrejection', (event) => {
+    const errorCode = event.reason?.code;
+    if (errorCode === 'auth/network-request-failed' || errorCode === 'auth/invalid-credential') {
+      console.warn(`Firebase error caught globally: ${errorCode}`, event.reason);
+      // Store the error for potential recovery later
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('lastAuthError', errorCode);
+      }
+    }
+  });
+}
 
 // Function to check internet connection
 export const checkOnlineStatus = (): boolean => {
@@ -31,6 +46,11 @@ export class OfflineError extends Error {
     super(message);
     this.name = "OfflineError";
   }
+}
+
+// Custom Firebase Auth Error
+interface FirebaseAuthError extends Error {
+  code?: string;
 }
 
 // Default mock API keys for development - replace with real values in production
@@ -73,6 +93,62 @@ if (isBrowser) {
 let auth;
 try {
   auth = getAuth(app);
+  
+  // Configure persistence (especially for development/network issues)
+  if (isBrowser) {
+    // Use long-lived persistence for better user experience
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => console.log('Auth persistence set successfully'))
+      .catch(error => console.warn('Failed to set auth persistence:', error));
+      
+    // Set up a periodic token refresh to prevent invalid-credential errors
+    let tokenRefreshInterval: any = null;
+    
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Clear any existing interval
+        if (tokenRefreshInterval) {
+          clearInterval(tokenRefreshInterval);
+        }
+        
+        // Refresh token every 15 minutes (Firebase tokens expire at 60 minutes)
+        // More frequent refreshes help prevent permission errors
+        tokenRefreshInterval = setInterval(() => {
+          getIdToken(user, true)
+            .then(() => console.log("Auth token refreshed"))
+            .catch(err => {
+              console.warn("Failed to refresh token:", err);
+              // If we get an invalid credential error, clear the interval
+              if (err.code === 'auth/invalid-credential') {
+                clearInterval(tokenRefreshInterval);
+              }
+            });
+        }, 15 * 60 * 1000); // 15 minutes
+      } else {
+        // Clear interval when user is signed out
+        if (tokenRefreshInterval) {
+          clearInterval(tokenRefreshInterval);
+          tokenRefreshInterval = null;
+        }
+      }
+    });
+  }
+  
+  // Add timeout configuration for Firebase auth requests
+  auth.settings = { 
+    ...auth.settings,
+    appVerificationDisabledForTesting: process.env.NODE_ENV === 'development',
+    // Increase timeouts for slow network connections
+    networkTimeout: {
+      authConnect: 30000,    // 30 seconds for auth connection
+      fetchTimeout: 60000,   // 60 seconds for fetch
+      signupTimeout: 60000,  // 60 seconds for signup
+      loginTimeout: 60000,   // 60 seconds for login
+      apiRequestTimeout: 60000, // 60 seconds for API requests
+    }
+  };
+  
+  console.log("Firebase Auth initialized successfully");
 } catch (error) {
   console.error("Error initializing Firebase Auth:", error);
   // Create a mock auth object
@@ -82,6 +158,18 @@ try {
     signInWithEmailAndPassword: () => Promise.reject(new Error("Mock auth - not implemented")),
     createUserWithEmailAndPassword: () => Promise.reject(new Error("Mock auth - not implemented")),
     signOut: () => Promise.resolve()
+  };
+}
+
+// Initialize Firebase Functions
+let functions;
+try {
+  functions = getFunctions(app, 'us-central1');
+  console.log('Firebase Functions initialized successfully');
+} catch (error) {
+  console.error("Error initializing Firebase Functions:", error);
+  functions = {
+    httpsCallable: () => Promise.reject(new Error("Mock functions - not implemented"))
   };
 }
 
@@ -159,17 +247,50 @@ if (isBrowser) {
   }
 }
 
-// Add Firestore emulator connection in development
-if (isBrowser && process.env.NODE_ENV !== 'production') {
-  // Use emulators in development if they're running
-  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === 'true') {
-    try {
-      connectAuthEmulator(auth, 'http://localhost:9099');
-      connectFirestoreEmulator(db, 'localhost', 8080);
-      console.log('Connected to Firebase emulators');
-    } catch (error) {
-      console.warn("Could not connect to Firebase emulators:", error);
+// Configure emulators only in development mode - modified for better stability
+if (isBrowser && process.env.NODE_ENV === 'development') {
+  try {
+    // Always use emulators in development mode
+    const useEmulators = false; // Disable emulators to fix network issues
+    
+    if (useEmulators) {
+      console.log('Enabling Firebase Emulators for development');
+      
+      // Connect to auth emulator with improved error handling
+      try {
+        console.log('Connecting to Auth emulator...');
+        // Use explicit IP and disable warnings
+        connectAuthEmulator(auth, 'http://127.0.0.1:9099', { 
+          disableWarnings: true,
+        });
+        console.log('Connected to Auth emulator successfully');
+      } catch (authError) {
+        console.error('Failed to connect to Auth emulator:', authError);
+        // Continue without emulator
+      }
+      
+      // Connect to Firestore emulator
+      try {
+        console.log('Connecting to Firestore emulator...');
+        connectFirestoreEmulator(db, '127.0.0.1', 8080);
+        console.log('Connected to Firestore emulator successfully');
+      } catch (firestoreError) {
+        console.error('Failed to connect to Firestore emulator:', firestoreError);
+        // Continue without emulator
+      }
+      
+      // Connect to Functions emulator
+      try {
+        console.log('Connecting to Functions emulator...');
+        connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+        console.log('Connected to Functions emulator successfully');
+      } catch (functionsError) {
+        console.error('Failed to connect to Functions emulator:', functionsError);
+        // Continue without emulator
+      }
     }
+  } catch (error) {
+    console.warn("Could not set up Firebase emulators:", error);
   }
 }
 
@@ -184,6 +305,28 @@ if (isBrowser) {
     console.warn('App is offline. Some features may be unavailable.');
     window.dispatchEvent(new CustomEvent('app:offline'));
   });
+}
+
+/**
+ * Helper function to force refresh the user's authentication token
+ * This can fix "Missing or insufficient permissions" errors that occur right after login
+ * when the token doesn't have the latest custom claims or user data
+ */
+export async function refreshAuthToken(): Promise<boolean> {
+  if (!auth.currentUser) {
+    console.warn('Cannot refresh token - no user is signed in');
+    return false;
+  }
+  
+  try {
+    // Force token refresh and wait for it to complete
+    await getIdToken(auth.currentUser, true);
+    console.log('Auth token refreshed successfully');
+    return true;
+  } catch (error) {
+    console.error('Failed to refresh auth token:', error);
+    return false;
+  }
 }
 
 /**
@@ -213,4 +356,4 @@ export async function withOfflineFallback<T>(dbOperation: () => Promise<T>, fall
   }
 }
 
-export { app, analytics, auth, db };
+export { app, analytics, auth, db, functions };

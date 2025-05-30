@@ -54,23 +54,23 @@ const MatchList: React.FC = () => {
 
   return (
     <div className="px-6 space-y-6">
-      <h2 className="text-2xl font-bold capitalize text-white">{sport} Matches</h2>
+      <h2 className="text-2xl font-bold capitalize text-gray-800">{sport} Matches</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {matches.map((match) => (
           <div
             key={match.id}
             onClick={() => router.push(`/matches/${match.id}`)}
-            className="bg-[#11151f] p-4 rounded-lg border border-transparent hover:border-[#25b95f] hover:bg-gray-800 cursor-pointer transition-colors"
+            className="bg-white p-4 rounded-lg border border-gray-200 hover:border-purple-400 hover:bg-gray-50 cursor-pointer transition-colors shadow-sm"
           >
-            <div className="flex justify-between items-center mb-2 text-white">
+            <div className="flex justify-between items-center mb-2 text-gray-800">
               <span className="font-semibold">{match.home}</span>
-              <span className="text-sm text-gray-400">{match.time}</span>
+              <span className="text-sm text-gray-500">{match.time}</span>
               <span className="font-semibold">{match.away}</span>
             </div>
-            <div className="flex justify-between text-sm text-gray-200">
-              <span className="px-2 py-1 bg-gray-700 rounded">{match.odds.home}</span>
-              {match.odds.draw && <span className="px-2 py-1 bg-gray-700 rounded">{match.odds.draw}</span>}
-              <span className="px-2 py-1 bg-gray-700 rounded">{match.odds.away}</span>
+            <div className="flex justify-between text-sm text-gray-600">
+              <span className="px-2 py-1 bg-gray-100 rounded">{match.odds.home}</span>
+              {match.odds.draw && <span className="px-2 py-1 bg-gray-100 rounded">{match.odds.draw}</span>}
+              <span className="px-2 py-1 bg-gray-100 rounded">{match.odds.away}</span>
             </div>
             <Link
               href={`/bet/${match.id}`}

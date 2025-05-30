@@ -1,0 +1,205 @@
+import axios, { AxiosRequestConfig } from 'axios';
+import { ODDS_API, ENDPOINTS, MARKETS, DEFAULT_PARAMS, IPL_CONFIG } from '@/config/oddsApiConfig';
+import { Match, LiveScore, CompatibleMatch } from '@/types/oddsApiTypes';
+
+/**
+ * Build common Axios request options for RapidAPI
+ */
+const createRequestOptions = (params: Record<string, any> = {}): AxiosRequestConfig => ({
+  baseURL: ODDS_API.BASE_URL,
+  headers: {
+    'X-RapidAPI-Key': ODDS_API.RAPID_API_KEY,
+    'X-RapidAPI-Host': ODDS_API.RAPID_API_HOST,
+  },
+  params: {
+    ...DEFAULT_PARAMS,
+    ...params,
+  },
+});
+
+/**
+ * Convert raw API match + optional live data into our app-compatible shape
+ */
+const convertToCompatibleFormat = (
+  match: Match,
+  liveData?: LiveScore
+): CompatibleMatch => {
+  const start = new Date(match.commence_time);
+  const [dateStr, timeStr] = start.toISOString().split('T');
+  const time = timeStr.substring(0, 8);
+
+  const homeScore = liveData?.scores?.home?.score ?? '';
+  const awayScore = liveData?.scores?.away?.score ?? '';
+  const homeOvers = liveData?.scores?.home?.overs ?? '';
+  const awayOvers = liveData?.scores?.away?.overs ?? '';
+
+  const isCompleted = liveData?.completed ?? false;
+  const isLive = !isCompleted && !!liveData?.scores;
+  const status = isCompleted ? 'completed' : isLive ? 'live' : 'not_started';
+  const status_str = isCompleted ? 'Completed' : isLive ? 'Live' : 'Not Started';
+
+  // Prepare betting odds
+  const betting_odds: CompatibleMatch['betting_odds'] = {};
+  const bookmaker = match.bookmakers?.[0];
+
+  if (bookmaker) {
+    const winnerMarket = bookmaker.markets.find(m => m.key === MARKETS.MATCH_WINNER);
+    if (winnerMarket) {
+      betting_odds.match_winner = Object.fromEntries(
+        winnerMarket.outcomes.map(o => [o.name, o.price])
+      );
+    }
+
+    const tossMarket = bookmaker.markets.find(m => m.key === MARKETS.TOSS_WINNER);
+    if (tossMarket) {
+      betting_odds.toss_winner = Object.fromEntries(
+        tossMarket.outcomes.map(o => [o.name, o.price])
+      );
+    }
+
+    const totalsMarket = bookmaker.markets.find(m => m.key === MARKETS.TOTALS);
+    if (totalsMarket) {
+      const over = totalsMarket.outcomes.find(o => o.name.toLowerCase().includes('over'));
+      const under = totalsMarket.outcomes.find(o => o.name.toLowerCase().includes('under'));
+      betting_odds.totals = {
+        ...(over && { over: { value: over.point, price: over.price } }),
+        ...(under && { under: { value: under.point, price: under.price } }),
+      };
+    }
+  }
+
+  return {
+    id: match.id,
+    title: `${match.home_team} vs ${match.away_team}`,
+    short_title: `${match.home_team} vs ${match.away_team}`,
+    status,
+    status_str,
+    competition_name: match.league || IPL_CONFIG.LEAGUE_NAME,
+    competition_id: 'ipl',
+    date: dateStr,
+    time,
+    localteam_id: match.home_team.toLowerCase().replace(/\s+/g, '_'),
+    localteam_name: match.home_team,
+    localteam_score: homeScore,
+    localteam_overs: homeOvers,
+    visitorteam_id: match.away_team.toLowerCase().replace(/\s+/g, '_'),
+    visitorteam_name: match.away_team,
+    visitorteam_score: awayScore,
+    visitorteam_overs: awayOvers,
+    venue_name: match.venue || 'TBD',
+    toss_winner: liveData?.toss?.winner,
+    toss_decision: liveData?.toss?.decision,
+    result: isCompleted ? liveData?.scores?.result : undefined,
+    is_live: isLive,
+    betting_odds,
+  };
+};
+
+/**
+ * Fetch upcoming IPL matches (with odds merged with any live scores)
+ */
+export const getIPLMatches = async (): Promise<CompatibleMatch[]> => {
+  const opts = createRequestOptions();
+  try {
+    // Try the specific tournament endpoint first if available
+    let upcomingResp;
+    try {
+      if (ENDPOINTS.TOURNAMENT_MATCHES) {
+        upcomingResp = await axios.get(ENDPOINTS.TOURNAMENT_MATCHES, opts);
+      } else {
+        throw new Error('Fallback to standard endpoint');
+      }
+    } catch (err) {
+      // Fallback to the standard endpoint
+      upcomingResp = await axios.get(ENDPOINTS.UPCOMING_MATCHES, opts);
+    }
+
+    const rawMatches: Match[] = upcomingResp.data.data ?? upcomingResp.data;
+    
+    // Filter for IPL matches using our configuration
+    const iplMatches = rawMatches.filter(m => 
+      // Match by exact tournament ID
+      (m.tournament_id === IPL_CONFIG.EXACT_TOURNAMENT_ID) ||
+      // Match by tournament key
+      (m.sport_key === IPL_CONFIG.TOURNAMENT_ID || m.league_key === 'ipl') ||
+      // Match by league name
+      (m.league && m.league.toLowerCase().includes(IPL_CONFIG.LEAGUE_NAME.toLowerCase())) ||
+      // Check if teams are in our IPL_CONFIG.TEAMS list
+      (IPL_CONFIG.TEAMS.includes(m.home_team) && IPL_CONFIG.TEAMS.includes(m.away_team))
+    );
+
+    // Parallel fetch live scores
+    const liveResp = await axios.get(ENDPOINTS.LIVE_SCORES, opts);
+    const liveScores: LiveScore[] = liveResp.data.data ?? liveResp.data;
+
+    return iplMatches.map(match => {
+      const live = liveScores.find(ls => ls.id === match.id);
+      return convertToCompatibleFormat(match, live);
+    });
+  } catch (error) {
+    console.error('getIPLMatches error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch only live IPL matches with odds
+ */
+export const getLiveIPLMatches = async (): Promise<CompatibleMatch[]> => {
+  const opts = createRequestOptions();
+  try {
+    const liveResp = await axios.get(ENDPOINTS.LIVE_SCORES, opts);
+    const liveScores: LiveScore[] = liveResp.data.data ?? liveResp.data;
+    const liveIpl = liveScores.filter(ls =>
+      (ls.sport_key === IPL_CONFIG.TOURNAMENT_ID || ls.league_key === 'ipl') || (ls.league ls.league_key === 'ipl' || ls.league?.toLowerCase().includes('indian premier league')ls.league_key === 'ipl' || ls.league?.toLowerCase().includes('indian premier league') ls.league.toLowerCase().includes(IPL_CONFIG.LEAGUE_NAME.toLowerCase())) || (ls.home_team && ls.away_team && IPL_CONFIG.TEAMS.includes(ls.home_team) && IPL_CONFIG.TEAMS.includes(ls.away_team))
+    );
+
+    const oddsResp = await axios.get(ENDPOINTS.UPCOMING_MATCHES, opts);
+    const oddsData: Match[] = oddsResp.data.data ?? oddsResp.data;
+
+    return liveIpl.map(liveMatch => {
+      const matchOdds = oddsData.find(o => o.id === liveMatch.id);
+      return convertToCompatibleFormat(
+        matchOdds ?? ({ ...liveMatch, bookmakers: [] } as Match),
+        liveMatch
+      );
+    });
+  } catch (error) {
+    console.error('getLiveIPLMatches error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch detailed odds for a specific match
+ */
+export const getMatchDetails = async (matchId: string): Promise<CompatibleMatch> => {
+  const opts = createRequestOptions();
+  try {
+    const detailResp = await axios.get(ENDPOINTS.MATCH_ODDS(matchId), opts);
+    const matchData: Match = detailResp.data.data ?? detailResp.data;
+
+    let liveData: LiveScore | undefined;
+    try {
+      const liveResp = await axios.get(ENDPOINTS.LIVE_SCORES, opts);
+      const allLive: LiveScore[] = liveResp.data.data ?? liveResp.data;
+      liveData = allLive.find(ls => ls.id === matchId);
+    } catch {
+      // ignore live fetch failures
+    }
+
+    return convertToCompatibleFormat(matchData, liveData);
+  } catch (error) {
+    console.error(`getMatchDetails(${matchId}) error:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch IPL match odds for use in the API route
+ * This function is specifically for the serverless API endpoint
+ */
+export const fetchIPLOdds = async (): Promise<CompatibleMatch[]> => {
+  // Reuse the existing function as it already provides what we need
+  return getIPLMatches();
+};

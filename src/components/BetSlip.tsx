@@ -257,246 +257,208 @@ const BetSlip: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#1a1f2c] h-full flex flex-col">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-[#2a3040] flex justify-between items-center">
-        <h2 className="font-bold text-white text-lg">Bet Slip</h2>
-        <div className="flex space-x-1">
-          <button
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              betMode === 'single' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-[#2a3040] text-gray-300 hover:bg-[#343b4f]'
-            }`}
-            onClick={() => setBetMode('single')}
-          >
-            Singles
-          </button>
-          <button
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              betMode === 'multi' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-[#2a3040] text-gray-300 hover:bg-[#343b4f]'
-            }`}
-            onClick={() => setBetMode('multi')}
-            disabled={bets.length < 2}
-          >
-            Multi
-          </button>
+    <div className="w-96 h-full flex flex-col border-l border-gray-200 bg-white">
+      {/* Bet slip header */}
+      <div className="p-4 border-b border-gray-200 bg-white">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-bold text-gray-800">Bet Slip</h2>
+          <div className="flex space-x-1">
+            <button
+              className={`px-3 py-1 text-sm rounded-full ${
+                betMode === 'single' 
+                  ? 'bg-purple-600 text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              onClick={() => setBetMode('single')}
+            >
+              Singles
+            </button>
+            <button
+              className={`px-3 py-1 text-sm rounded-full ${
+                betMode === 'multi' 
+                  ? 'bg-purple-600 text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              onClick={() => setBetMode('multi')}
+            >
+              Multi
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Bet slip content */}
+      {/* Bet items */}
       <div className="flex-1 overflow-y-auto">
-        {isOffline && (
-          <div className="bg-yellow-500 bg-opacity-10 text-yellow-400 p-2 text-xs text-center border-b border-yellow-500 border-opacity-20">
-            You are currently offline. Some features may be unavailable.
-          </div>
-        )}
-        
         {bets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full px-4 py-8 text-center">
-            <svg className="w-12 h-12 text-gray-500 mb-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 5H5C3.89543 5 3 5.89543 3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V7C21 5.89543 20.1046 5 19 5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M3 7L12 13L21 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <p className="text-gray-400">{emptyMessage}</p>
-            <p className="text-sm text-gray-500 mt-1">Select odds to add bets</p>
-          </div>
+          <div className="p-8 text-center text-gray-500">{emptyMessage}</div>
         ) : (
-          <>
-            <div className="p-3">
-              <div className="flex justify-between mb-3">
-                <span className="text-sm text-gray-400">{bets.length} Selections</span>
-                <button 
-                  className="text-xs text-blue-400 hover:text-blue-300"
-                  onClick={clearAllBets}
-                >
-                  Clear All
-                </button>
-              </div>
-
-              {/* Payment Method Toggle */}
-              <div className="bg-[#2a3040] rounded-md p-3 mb-3">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-400">Payment Method</span>
+          <div className="divide-y divide-gray-200">
+            {bets.map((bet) => (
+              <div key={bet.id} className="p-4 bg-white hover:bg-gray-50">
+                <div className="flex justify-between">
+                  <div className="text-xs text-gray-500">{bet.league}</div>
+                  <div className="text-xs text-gray-500">{bet.time}</div>
                 </div>
-                <div className="flex border border-[#3a4050] rounded-md overflow-hidden">
-                  <button
-                    className={`flex-1 py-2 text-center text-sm transition-colors ${
-                      paymentMethod === 'wallet'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-[#1a1f2c] text-gray-300 hover:bg-[#2a3040]'
-                    }`}
-                    onClick={() => setPaymentMethod('wallet')}
-                  >
-                    Wallet
-                  </button>
-                  <button
-                    className={`flex-1 py-2 text-center text-sm transition-colors ${
-                      paymentMethod === 'coins'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-[#1a1f2c] text-gray-300 hover:bg-[#2a3040]'
-                    }`}
-                    onClick={() => setPaymentMethod('coins')}
-                  >
-                    Coins
-                  </button>
-                </div>
-              </div>
-
-              {/* Wallet Info Component */}
-              <WalletInfo 
-                totalStake={betMode === 'single' ? totalSinglesStake : parseFloat(totalStake || '0')} 
-                paymentMethod={paymentMethod}
-                coinsBalance={coinsBalance}
-              />
-
-              {/* Bet selections */}
-              <div className="space-y-3">
-                {bets.map(bet => (
-                  <div 
-                    key={bet.id} 
-                    className="bg-[#2a3040] rounded-md p-3 relative group"
-                  >
-                    <button 
-                      className="absolute top-2 right-2 text-gray-500 hover:text-white"
-                      onClick={() => removeBet(bet.id)}
-                    >
-                      ✕
-                    </button>
-
-                    <div className="flex justify-between items-start mb-1">
-                      <div className="text-xs text-gray-400">
-                        {bet.league}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        {bet.time}
-                      </div>
-                    </div>
-
-                    <div className="text-sm text-white mb-1">
-                      {bet.match}
-                    </div>
-
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="text-sm font-medium text-white">
-                        {bet.selection.name}
-                      </div>
-                      <div className="text-green-400 font-bold">
-                        {bet.odds.toFixed(2)}
-                      </div>
-                    </div>
-
-                    {betMode === 'single' && (
-                      <div className="flex items-center mt-2">
-                        <div className="w-full">
-                          <div className="flex justify-between items-center mb-1">
-                            <label className="text-xs text-gray-400">Stake</label>
-                            <div className="text-xs text-gray-400">
-                              Win: {formatCurrency(calculateSingleWin(bet.id))}
-                            </div>
-                          </div>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-2 text-gray-400">$</span>
-                            <input
-                              type="text"
-                              className="w-full bg-[#1a1f2c] rounded pl-6 py-1.5 text-right pr-2 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              value={stakeValues[bet.id] || ''}
-                              onChange={(e) => handleStakeChange(bet.id, e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                
+                <div className="mt-1 text-sm font-medium text-gray-800">{bet.match}</div>
+                
+                <div className="mt-2 flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                      {bet.selection.name}
+                    </span>
+                    <span className="text-purple-800 font-semibold">{bet.odds.toFixed(2)}</span>
                   </div>
-                ))}
+                  
+                  <button 
+                    onClick={() => removeBet(bet.id)}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {betMode === 'single' && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor={`stake-${bet.id}`} className="text-xs text-gray-600">
+                        Stake
+                      </label>
+                      <div className="text-xs text-gray-600">
+                        Potential win: {formatCurrency(calculateSingleWin(bet.id))}
+                      </div>
+                    </div>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">$</span>
+                      </div>
+                      <input
+                        type="number"
+                        id={`stake-${bet.id}`}
+                        className="focus:ring-purple-500 focus:border-purple-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                        placeholder="0.00"
+                        value={stakeValues[bet.id] || ''}
+                        onChange={(e) => handleStakeChange(bet.id, e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          </>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Bet slip footer */}
+      {/* Wallet info & bet actions */}
       {bets.length > 0 && (
-        <div className="p-4 border-t border-[#2a3040]">
-          {betSuccess && (
-            <div className="bg-green-500 bg-opacity-10 text-green-400 p-3 rounded mb-4 text-sm">
-              Bet placed successfully!
+        <div className="p-4 border-t border-gray-200 bg-white">
+          {/* Toggle between wallet and coins */}
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-sm text-gray-700">Pay with</span>
+            <div 
+              className="flex items-center cursor-pointer"
+              onClick={togglePaymentMethod}
+            >
+              <div className={`w-12 h-6 rounded-full p-1 ${paymentMethod === 'coins' ? 'bg-yellow-400' : 'bg-green-500'}`}>
+                <div 
+                  className={`w-4 h-4 rounded-full bg-white transform transition-transform ${
+                    paymentMethod === 'coins' ? 'translate-x-6' : ''
+                  }`}
+                ></div>
+              </div>
+              <span className="ml-2 text-sm font-medium text-gray-700">
+                {paymentMethod === 'wallet' ? 'Wallet' : 'Coins'}
+              </span>
+            </div>
+          </div>
+          
+          {/* Wallet/Coins balance */}
+          <WalletInfo 
+            totalStake={betMode === 'single' ? totalSinglesStake : parseFloat(totalStake || '0')}
+            paymentMethod={paymentMethod}
+            coinsBalance={coinsBalance}
+          />
+          
+          {betMode === 'multi' && (
+            <div className="mt-4">
+              <div className="flex justify-between mb-1">
+                <span className="text-sm text-gray-600">Total Odds</span>
+                <span className="text-sm font-medium text-gray-800">{totalOdds.toFixed(2)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center mb-1">
+                <label htmlFor="multi-stake" className="text-sm text-gray-600">
+                  Stake
+                </label>
+                <div className="text-sm text-gray-600">
+                  Potential win: {formatCurrency(multiWin)}
+                </div>
+              </div>
+              
+              <div className="relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">$</span>
+                </div>
+                <input
+                  type="number"
+                  id="multi-stake"
+                  className="focus:ring-purple-500 focus:border-purple-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                  placeholder="0.00"
+                  value={totalStake}
+                  onChange={(e) => handleTotalStakeChange(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          
+          {betMode === 'single' && (
+            <div className="mt-4">
+              <div className="flex justify-between mb-1">
+                <span className="text-sm text-gray-600">Total Stake</span>
+                <span className="text-sm font-medium text-gray-800">{formatCurrency(totalSinglesStake)}</span>
+              </div>
+              
+              <div className="flex justify-between mb-1">
+                <span className="text-sm text-gray-600">Potential Returns</span>
+                <span className="text-sm font-medium text-gray-800">
+                  {formatCurrency(Object.keys(stakeValues).reduce(
+                    (total, betId) => total + calculateSingleWin(betId), 0
+                  ))}
+                </span>
+              </div>
             </div>
           )}
           
           {betError && (
-            <div className="bg-red-500 bg-opacity-10 text-red-400 p-3 rounded mb-4 text-sm">
+            <div className="mt-3 p-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
               {betError}
             </div>
           )}
           
-          {betMode === 'single' ? (
-            <div className="mb-3">
-              <div className="flex justify-between items-center mb-1 text-sm">
-                <span className="text-gray-400">Total Stake:</span>
-                <span className="text-white font-medium">{formatCurrency(totalSinglesStake)}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Potential Win:</span>
-                <span className="text-green-400 font-bold">
-                  {formatCurrency(
-                    Object.keys(stakeValues).reduce(
-                      (sum, betId) => sum + calculateSingleWin(betId), 
-                      0
-                    )
-                  )}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="mb-3">
-              <div className="flex justify-between items-center mb-1 text-sm">
-                <span className="text-gray-400">Total Odds:</span>
-                <span className="text-white font-medium">{totalOdds.toFixed(2)}</span>
-              </div>
-              
-              <div className="mb-3">
-                <label className="text-xs text-gray-400 block mb-1">Multi Bet Stake</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-2 text-gray-400">$</span>
-                  <input
-                    type="text"
-                    className="w-full bg-[#1a1f2c] rounded pl-6 py-1.5 text-right pr-2 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={totalStake}
-                    onChange={(e) => handleTotalStakeChange(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Potential Win:</span>
-                <span className="text-green-400 font-bold">
-                  {formatCurrency(isNaN(multiWin) ? 0 : multiWin)}
-                </span>
-              </div>
+          {betSuccess && (
+            <div className="mt-3 p-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded">
+              Your bet has been placed successfully!
             </div>
           )}
           
-          <Button 
-            className="w-full py-3 bg-green-600 hover:bg-green-700 font-medium"
-            onClick={placeBet}
-            disabled={
-              placingBet || 
-              !currentUser || 
-              (isOffline && paymentMethod === 'wallet') ||
-              (betMode === 'single' ? totalSinglesStake > currentBalance : parseFloat(totalStake) > currentBalance)
-            }
-          >
-            {placingBet ? 'Processing...' : (isOffline && paymentMethod === 'wallet') ? 'Offline' : 'Place Bet'}
-          </Button>
-          
-          {!currentUser && (
-            <p className="text-xs text-center text-gray-400 mt-2">
-              Please log in to place bets
-            </p>
-          )}
+          <div className="mt-4 flex space-x-2">
+            <Button 
+              onClick={clearAllBets}
+              className="flex-1 bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 py-2"
+            >
+              Clear All
+            </Button>
+            
+            <Button 
+              onClick={placeBet}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2"
+              disabled={placingBet}
+            >
+              {placingBet ? 'Processing...' : 'Place Bet'}
+            </Button>
+          </div>
         </div>
       )}
     </div>

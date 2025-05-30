@@ -34,6 +34,15 @@ interface FilterOption {
   name: string;
 }
 
+// Scoreboard interface (for the extended CricketFixture)
+interface Scoreboard {
+  team_id: number;
+  type: string;
+  total: number;
+  wickets: number;
+  overs: number;
+}
+
 // Main IPL Bets Page component
 export default function IPLBetsPage() {
   const router = useRouter();
@@ -104,9 +113,26 @@ export default function IPLBetsPage() {
     
     const normalizedTeamName = teamName.toLowerCase().replace(/-/g, ' ');
     
-    // Get team names from the mapping
-    const teamA = CRICKET_TEAM_NAMES[match.localteam_id] || '';
-    const teamB = CRICKET_TEAM_NAMES[match.visitorteam_id] || '';
+    // First check if we have team name from included data in the API response
+    let teamA = '';
+    let teamB = '';
+    
+    // Try to get team names from API-included data first
+    if (match.localteam && typeof match.localteam === 'object' && match.localteam.name) {
+      teamA = match.localteam.name;
+    } else {
+      // Fall back to mapping
+      teamA = CRICKET_TEAM_NAMES[match.localteam_id] || '';
+    }
+    
+    if (match.visitorteam && typeof match.visitorteam === 'object' && match.visitorteam.name) {
+      teamB = match.visitorteam.name;
+    } else {
+      // Fall back to mapping
+      teamB = CRICKET_TEAM_NAMES[match.visitorteam_id] || '';
+    }
+    
+    console.log(`Checking if "${normalizedTeamName}" is part of "${teamA.toLowerCase()}" or "${teamB.toLowerCase()}"`);
     
     return (
       teamA.toLowerCase().includes(normalizedTeamName) || 
@@ -184,6 +210,21 @@ export default function IPLBetsPage() {
     alert('Withdraw functionality would be integrated with a payment gateway.');
   };
 
+  // Helper function to get team name display
+  const getTeamName = (teamId: number, match: CricketFixture): string => {
+    // Try to get team names from API-included data first
+    if (match.localteam && match.localteam_id === teamId && match.localteam.name) {
+      return match.localteam.name;
+    }
+    
+    if (match.visitorteam && match.visitorteam_id === teamId && match.visitorteam.name) {
+      return match.visitorteam.name;
+    }
+    
+    // Fall back to mapping
+    return CRICKET_TEAM_NAMES[teamId] || `Team ${teamId}`;
+  };
+
   return (
     <>
       <Head>
@@ -191,206 +232,208 @@ export default function IPLBetsPage() {
         <meta name="description" content="Live IPL cricket betting" />
       </Head>
       
-      <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen bg-white text-gray-800">
         {/* Header */}
-        <header className="bg-[#0a0d14] border-b border-[#1a2030] p-4">
+        <header className="bg-white border-b border-gray-200 p-4 shadow-sm">
           <div className="container mx-auto flex justify-between items-center">
             <Link href="/">
               <div className="text-2xl font-bold text-[#25b95f]">
                 FOXXY
               </div>
             </Link>
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-400">Balance: ₹{walletBalance.toLocaleString()}</span>
+            
+            <div className="flex space-x-4 items-center">
+              <div className="px-4 py-2 border border-gray-200 rounded-lg bg-white text-gray-800">
+                Balance: ₹{walletBalance.toLocaleString()}
+              </div>
               <button 
-                className="bg-[#25b95f] text-white px-3 py-1 rounded"
                 onClick={handleDeposit}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
                 Deposit
               </button>
               <button 
-                className={`px-3 py-1 rounded ${showBets ? 'bg-[#25b95f] text-white' : 'bg-[#1a2030] text-gray-300'}`}
                 onClick={() => setShowBets(!showBets)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
               >
-                My Bets {placedBets.length > 0 && `(${placedBets.length})`}
+                My Bets
               </button>
+              <HelpButton onClick={() => setShowChat(!showChat)} />
             </div>
           </div>
         </header>
         
-        <main className="container mx-auto py-6 px-4">
-          {/* Breadcrumb navigation */}
-          <div className="mb-6">
-            <div className="flex items-center text-sm">
-              <Link href="/" className="text-gray-400 hover:text-white">Home</Link>
-              <span className="mx-2 text-gray-600">/</span>
-              <Link href="/cricket" className="text-gray-400 hover:text-white">Cricket</Link>
-              <span className="mx-2 text-gray-600">/</span>
-              <span className="text-white">IPL{teamName ? ` - ${teamNameForDisplay}` : ''}</span>
+        <main className="container mx-auto p-4 flex flex-col md:flex-row">
+          {/* Sidebar with matches */}
+          <div className="w-full md:w-64 mb-6 md:mb-0 md:mr-6">
+            <div className="mb-4">
+              <Link href="/cricket/ipl" className="text-purple-600 hover:text-purple-800 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to all IPL
+              </Link>
+            </div>
+            
+            <h2 className="text-xl font-bold mb-4">
+              {teamNameForDisplay ? `${teamNameForDisplay} Matches` : 'IPL Matches'}
+            </h2>
+            
+            {loading ? (
+              <div className="animate-pulse space-y-2">
+                <div className="h-12 bg-gray-200 rounded"></div>
+                <div className="h-12 bg-gray-200 rounded"></div>
+                <div className="h-12 bg-gray-200 rounded"></div>
+              </div>
+            ) : error ? (
+              <div className="bg-red-100 text-red-800 p-3 rounded">
+                Error loading matches: {error}
+              </div>
+            ) : filteredMatches.length === 0 ? (
+              <div className="bg-gray-100 text-gray-600 p-3 rounded">
+                No matches found for {teamNameForDisplay || 'IPL'}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredMatches.map(match => (
+                  <button
+                    key={match.id}
+                    onClick={() => handleSelectMatch(match)}
+                    className={`w-full text-left p-3 rounded-lg transition ${
+                      selectedMatch?.id === match.id
+                        ? 'bg-purple-100 border border-purple-300'
+                        : 'bg-white border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="font-medium">
+                      {getTeamName(match.localteam_id, match)} vs {getTeamName(match.visitorteam_id, match)}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      {new Date(match.starting_at).toLocaleDateString()} - {match.venue?.name || 'TBD'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {/* Filter Panel */}
+            <div className="mt-6">
+              <FilterPanel 
+                availableMarkets={availableMarkets}
+                availablePlayers={availablePlayers}
+                activeFilters={activeFilters}
+                onChange={handleFilterChange}
+              />
             </div>
           </div>
           
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#25b95f] mx-auto mb-4"></div>
-              <p>Loading matches...</p>
-            </div>
-          ) : error ? (
-            <div className="bg-red-900/20 border border-red-900 p-4 rounded-lg mb-6">
-              <p className="text-red-400">{error}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Left sidebar - Match selection */}
-              <div className="lg:col-span-1">
-                <h2 className="text-xl font-bold mb-4">
-                  {teamName ? `${teamNameForDisplay} Matches` : 'IPL Matches'}
-                </h2>
-                <div className="space-y-4">
-                  {filteredMatches.map(match => (
-                    <div 
-                      key={match.id}
-                      onClick={() => handleSelectMatch(match)}
-                      className={`
-                        p-3 rounded-lg cursor-pointer transition
-                        ${selectedMatch?.id === match.id ? 'bg-[#0a0d14] border border-[#25b95f]/50' : 'bg-[#0a0d14] border border-[#1a2030] hover:border-[#25b95f]/30'}
-                      `}
-                    >
-                      <div className="flex justify-between mb-1">
-                        <span className="text-xs text-gray-400">
-                          {new Date(match.starting_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </span>
-                        {match.status === 'live' && (
-                          <span className="px-1.5 py-0.5 bg-red-600 text-white text-xs rounded-full flex items-center">
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse mr-1"></span>
-                            LIVE
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="font-medium">{CRICKET_TEAM_NAMES[match.localteam_id]}</span>
-                        <span className="mx-2 text-gray-400">vs</span>
-                        <span className="font-medium">{CRICKET_TEAM_NAMES[match.visitorteam_id]}</span>
-                      </div>
-                      {match.status === 'live' && (
-                        <div className="mt-2 pt-2 border-t border-[#1a2030] flex justify-between">
-                          <span className="text-sm">{match.localteam_score || '0/0'}</span>
-                          <span className="text-sm">{match.visitorteam_score || '0/0'}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+          {/* Main content area */}
+          <div className="flex-1">
+            {/* Selected match details */}
+            {selectedMatch ? (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">
+                <h1 className="text-2xl font-bold mb-2">
+                  {getTeamName(selectedMatch.localteam_id, selectedMatch)} vs {getTeamName(selectedMatch.visitorteam_id, selectedMatch)}
+                </h1>
+                <div className="text-gray-600">
+                  {new Date(selectedMatch.starting_at).toLocaleString()} at {selectedMatch.venue?.name || 'TBD'}
                 </div>
-              </div>
-              
-              {/* Main content - Betting area */}
-              <div className="lg:col-span-3">
-                {showBets ? (
-                  <div className="bg-[#0a0d14] border border-[#1a2030] rounded-lg p-4 shadow-lg">
-                    <h2 className="text-xl font-bold mb-4">My Bets</h2>
-                    {placedBets.length === 0 ? (
-                      <div className="text-center text-gray-400 py-12">
-                        <p>You have no active bets</p>
-                        <p className="text-sm mt-2">Place a bet to see it here</p>
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-white border-collapse">
-                          <thead>
-                            <tr>
-                              <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-4 text-left border-b border-gray-700">
-                                Selection
-                              </th>
-                              <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-4 text-center border-b border-gray-700">
-                                Market
-                              </th>
-                              <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-4 text-center border-b border-gray-700">
-                                Odds
-                              </th>
-                              <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-4 text-center border-b border-gray-700">
-                                Stake
-                              </th>
-                              <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-4 text-center border-b border-gray-700">
-                                Potential Win
-                              </th>
-                              <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-4 text-center border-b border-gray-700">
-                                Placed At
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {placedBets.map((bet, index) => (
-                              <tr key={bet.betId} className={index % 2 === 0 ? 'bg-black' : 'bg-[#0a0d14]'}>
-                                <td className="py-3 px-4 text-left border-b border-gray-700">
-                                  <div className="font-medium">{bet.selection}</div>
-                                  <div className="text-xs text-gray-400">
-                                    {bet.side === 'back' ? 'Back' : 'Lay'}
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4 text-center border-b border-gray-700">
-                                  {bet.market}
-                                </td>
-                                <td className="py-3 px-4 text-center border-b border-gray-700">
-                                  <span className={`font-medium ${bet.side === 'back' ? 'text-[#25b95f]' : 'text-[#e53935]'}`}>
-                                    {bet.odds.toFixed(2)}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-center border-b border-gray-700">
-                                  ₹{bet.stake.toLocaleString()}
-                                </td>
-                                <td className="py-3 px-4 text-center border-b border-gray-700">
-                                  <span className="text-[#25b95f]">
-                                    ₹{bet.potentialWin.toLocaleString()}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-center border-b border-gray-700">
-                                  <span className="text-sm">
-                                    {bet.placedAt.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                {selectedMatch.status === 'live' && (
+                  <div className="mt-2 px-2 py-1 bg-green-100 text-green-800 inline-block rounded text-sm">
+                    LIVE
                   </div>
-                ) : selectedMatch ? (
-                  <div className="space-y-4">
-                    {/* Filters */}
-                    <FilterPanel
-                      markets={availableMarkets}
-                      players={availablePlayers}
-                      onFilterChange={handleFilterChange}
-                    />
-                    
-                    {/* Market tabs - only show markets that are in the active filters */}
-                    <MarketTabs 
-                      selectedMarket={selectedMarket}
-                      onSelectMarket={handleSelectMarket}
-                    />
-                    
-                    {/* Betting grid */}
-                    <CricketOddsGrid 
-                      match={selectedMatch}
-                      market={selectedMarket}
-                      onSelectOdds={handlePlaceBet}
-                    />
-                  </div>
-                ) : (
-                  <div className="bg-[#0a0d14] border border-[#1a2030] rounded-lg p-6 text-center">
-                    <p className="text-gray-400">Select a match to start betting</p>
+                )}
+                
+                {/* Innings summary - check if scoreboards exists first */}
+                {selectedMatch.scoreboards && Array.isArray(selectedMatch.scoreboards) && selectedMatch.scoreboards.length > 0 && (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedMatch.scoreboards.map((scoreboard: Scoreboard, idx: number) => (
+                      <div key={idx} className="bg-gray-50 p-3 rounded border border-gray-200">
+                        <div className="font-medium">
+                          {getTeamName(scoreboard.team_id, selectedMatch)} - {scoreboard.type}
+                        </div>
+                        <div className="text-xl font-bold mt-1">
+                          {scoreboard.total}/{scoreboard.wickets} ({scoreboard.overs})
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="bg-gray-100 text-gray-600 p-8 rounded-lg text-center">
+                Select a match to view betting markets
+              </div>
+            )}
+            
+            {/* Betting markets */}
+            {selectedMatch && (
+              <>
+                <MarketTabs 
+                  activeMarket={selectedMarket}
+                  availableMarkets={activeFilters.markets}
+                  onSelectMarket={handleSelectMarket}
+                />
+                
+                <div className="mt-4">
+                  <CricketOddsGrid
+                    match={selectedMatch}
+                    market={selectedMarket}
+                    playerFilters={activeFilters.players}
+                    onPlaceBet={handlePlaceBet}
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </main>
+        
+        {/* Placed bets drawer */}
+        {showBets && (
+          <div className="fixed inset-0 z-40 bg-gray-600 bg-opacity-50 flex justify-end">
+            <div className="w-full max-w-md bg-white h-full p-6 overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">My Bets</h2>
+                <button 
+                  onClick={() => setShowBets(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {placedBets.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  You haven't placed any bets yet
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {placedBets.map(bet => (
+                    <div key={bet.betId} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <div className="font-medium">{bet.selection}</div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {bet.market} @ {bet.odds} ({bet.side})
+                      </div>
+                      <div className="flex justify-between mt-2 text-sm">
+                        <span className="text-gray-600">Stake: ₹{bet.stake}</span>
+                        <span className="font-medium">Potential Win: ₹{bet.potentialWin.toFixed(2)}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-2">
+                        Placed: {bet.placedAt.toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Chat widget */}
+        {showChat && <HelpChatWidget onClose={() => setShowChat(false)} />}
       </div>
-      
-      {/* Help chat widget */}
-      {showChat && <HelpChatWidget onClose={() => setShowChat(false)} />}
-      {!showChat && <HelpButton onClick={() => setShowChat(true)} />}
     </>
   );
 } 

@@ -6,11 +6,23 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    // Check if user is a superadmin
+    function isSuperadmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin';
+    }
+    
     // Check if user is an admin
     function isAdmin() {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Check if user is either admin or superadmin
+    function isAdminOrSuperadmin() {
+      return isAdmin() || isSuperadmin();
     }
     
     // Base rule - deny all by default
@@ -22,21 +34,27 @@ service cloud.firestore {
     match /users/{userId} {
       // Allow users to read their own profile
       allow read: if isAuthenticated() && request.auth.uid == userId;
-      // Allow admins to read all user profiles
-      allow read: if isAdmin();
+      // Allow admins and superadmins to read all user profiles
+      allow read: if isAdminOrSuperadmin();
       // Allow users to create their own profile
       allow create: if isAuthenticated() && request.auth.uid == userId;
       // Allow users to update their own profile, but not change role
       allow update: if isAuthenticated() && request.auth.uid == userId && 
                    !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isAdmin']);
-      // Allow admins to update any user profile
-      allow update: if isAdmin();
+      // Allow admins to update user profiles (except superadmins)
+      allow update: if isAdmin() && 
+                    !(exists(/databases/$(database)/documents/users/$(userId)) && 
+                     get(/databases/$(database)/documents/users/$(userId)).data.role == 'superadmin');
+      // Allow superadmins to update any user profile
+      allow update: if isSuperadmin();
+      // Allow superadmins to delete users
+      allow delete: if isSuperadmin();
     }
     
     // Admin collection for admin users
     match /admins/{userId} {
-      // Allow admins to read/write admin data
-      allow read, write: if isAdmin();
+      // Allow admins and superadmins to read/write admin data
+      allow read, write: if isAdminOrSuperadmin();
       // Allow a user to read their own admin document for verification
       allow read: if isAuthenticated() && request.auth.uid == userId;
     }
@@ -45,36 +63,50 @@ service cloud.firestore {
     match /matches/{matchId} {
       // Anyone can read match data
       allow read: if true;
-      // Only admins can write
-      allow write: if isAdmin();
+      // Only admins and superadmins can write
+      allow write: if isAdminOrSuperadmin();
     }
     
     // Transactions for bets and payments
     match /transactions/{transactionId} {
       // Users can read their own transactions
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      // Admins can read all transactions
-      allow read: if isAdmin();
+      // Admins and superadmins can read all transactions
+      allow read: if isAdminOrSuperadmin();
       // Allow creation with verification
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      // Allow admins to update
-      allow update: if isAdmin();
+      // Allow admins and superadmins to update
+      allow update: if isAdminOrSuperadmin();
+      // Allow superadmins to delete
+      allow delete: if isSuperadmin();
+    }
+    
+    // Coin transactions collection
+    match /coinTransactions/{transactionId} {
+      // Users can read their own transactions
+      allow read: if isAuthenticated() && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      // Admins and superadmins can read all transactions
+      allow read: if isAdminOrSuperadmin();
+      // Allow creation with verification
+      allow create: if isAuthenticated() && request.resource.data.fromUid == request.auth.uid;
+      // Allow superadmins to create any transaction
+      allow create: if isSuperadmin();
     }
     
     // Settings collection for global settings
     match /settings/{settingId} {
       // Anyone can read settings
       allow read: if true;
-      // Only admins can write settings
-      allow write: if isAdmin();
+      // Only admins and superadmins can write settings
+      allow write: if isAdminOrSuperadmin();
     }
     
     // Bonus rules collection
     match /bonusRules/{ruleId} {
       // Authenticated users can read bonus rules
       allow read: if isAuthenticated();
-      // Only admins can create, update, or delete bonus rules
-      allow create, update, delete: if isAdmin();
+      // Only admins and superadmins can create, update, or delete bonus rules
+      allow create, update, delete: if isAdminOrSuperadmin();
     }
   }
 } 

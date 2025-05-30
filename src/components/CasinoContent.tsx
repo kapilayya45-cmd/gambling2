@@ -42,7 +42,7 @@ const CasinoContent: React.FC = () => {
             className={`px-4 py-2 rounded-full whitespace-nowrap ${
               activeCategory === category.id
                 ? 'bg-purple-600 text-white'
-                : 'bg-[#2a3040] text-gray-300 hover:bg-[#343b4f]'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
             onClick={() => setActiveCategory(category.id)}
           >
@@ -54,9 +54,9 @@ const CasinoContent: React.FC = () => {
       {/* Games Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {filteredGames.map(game => (
-          <div key={game.id} className="bg-[#1a1f2c] rounded-lg overflow-hidden hover:bg-[#2a3040] transition-colors cursor-pointer group">
+          <div key={game.id} className="bg-white rounded-lg overflow-hidden hover:bg-gray-50 transition-colors cursor-pointer group shadow border border-gray-200">
             {/* Game image (using placeholder color since we don't have actual images) */}
-            <div className="aspect-square bg-gradient-to-br from-[#2a3040] to-[#1a1f2c] relative">
+            <div className="aspect-square bg-gradient-to-br from-gray-100 to-white relative">
               {/* Game labels */}
               {game.isNew && (
                 <span className="absolute top-2 left-2 bg-purple-600 text-white text-xs px-2 py-0.5 rounded">NEW</span>
@@ -66,7 +66,7 @@ const CasinoContent: React.FC = () => {
               )}
               
               {/* Play button that appears on hover */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50">
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                 <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-medium transition-colors">
                   Play Now
                 </button>
@@ -75,7 +75,7 @@ const CasinoContent: React.FC = () => {
             
             {/* Game name */}
             <div className="p-3">
-              <h3 className="font-medium truncate">{game.name}</h3>
+              <h3 className="font-medium truncate text-gray-800">{game.name}</h3>
             </div>
           </div>
         ))}

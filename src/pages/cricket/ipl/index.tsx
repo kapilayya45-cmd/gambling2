@@ -1,0 +1,50 @@
+import React, { useState } from 'react';
+import { NextPage } from 'next';
+import Head from 'next/head';
+import { BettingLayout } from '@/components/BettingLayout';
+import { IPLMatchList } from '@/components/cricket/IPLMatchList';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+
+const IPLPage: NextPage = () => {
+  return (
+    <>
+      <Head>
+        <title>IPL Cricket Matches & Betting Odds | BetMaster</title>
+        <meta name="description" content="View live and upcoming IPL cricket matches with real-time betting odds." />
+      </Head>
+      
+      <BettingLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold mb-2">IPL Cricket</h1>
+            <p className="text-gray-600">
+              View live and upcoming Indian Premier League matches with the latest betting odds
+            </p>
+          </div>
+          
+          <Tabs defaultValue="all">
+            <TabsList className="mb-6">
+              <TabsTrigger value="all">All Matches</TabsTrigger>
+              <TabsTrigger value="live">Live Matches</TabsTrigger>
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="all">
+              <IPLMatchList />
+            </TabsContent>
+            
+            <TabsContent value="live">
+              <IPLMatchList showLiveOnly={true} />
+            </TabsContent>
+            
+            <TabsContent value="upcoming">
+              <IPLMatchList showLiveOnly={false} />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </BettingLayout>
+    </>
+  );
+};
+
+export default IPLPage; 

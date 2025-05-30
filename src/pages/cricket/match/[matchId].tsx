@@ -5,69 +5,11 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import UserBalanceDisplay from '@/components/UserBalanceDisplay';
-import CricketMatchStats from '@/components/cricket/CricketMatchStats';
 import MarketTabs, { BettingMarket } from '@/components/cricket/MarketTabs';
-import CricketOddsGrid from '@/components/cricket/CricketOddsGrid';
-import { CricketFixture, CRICKET_TEAM_NAMES } from '@/services/cricketApi';
 import BetSlip from '@/components/BetSlip';
-
-// Mock cricket fixture for testing
-const MOCK_FIXTURES: Record<string, CricketFixture> = {
-  '101': {
-    id: 101,
-    league_id: 1, // IPL
-    localteam_id: 101,
-    visitorteam_id: 102,
-    starting_at: new Date(Date.now() - 40 * 60000).toISOString(), // started 40 min ago
-    localteam_score: '128/4',
-    visitorteam_score: '',
-    status: 'live',
-    venue_name: 'Wankhede Stadium',
-    venue_city: 'Mumbai',
-    venue_capacity: 33000,
-    toss_winner_team_id: 101,
-    toss_decision: 'bat',
-    live_score: {
-      runs: 128,
-      wickets: 4,
-      overs: 14.2,
-      run_rate: 8.94
-    }
-  },
-  '102': {
-    id: 102,
-    league_id: 1, // IPL
-    localteam_id: 103,
-    visitorteam_id: 104,
-    starting_at: new Date(Date.now() + 90 * 60000).toISOString(), // starts in 90 min
-    status: 'notstarted',
-    venue_name: 'M. Chinnaswamy Stadium',
-    venue_city: 'Bangalore',
-    venue_capacity: 40000
-  },
-  '103': {
-    id: 103,
-    league_id: 1, // IPL
-    localteam_id: 105,
-    visitorteam_id: 106,
-    starting_at: new Date(Date.now() + 180 * 60000).toISOString(), // starts in 3 hours
-    status: 'notstarted',
-    venue_name: 'Feroz Shah Kotla',
-    venue_city: 'Delhi',
-    venue_capacity: 41000
-  },
-  '104': {
-    id: 104,
-    league_id: 1, // IPL
-    localteam_id: 107,
-    visitorteam_id: 108,
-    starting_at: new Date(Date.now() + 240 * 60000).toISOString(), // starts in 4 hours
-    status: 'notstarted',
-    venue_name: 'Punjab Cricket Association Stadium',
-    venue_city: 'Mohali',
-    venue_capacity: 30000
-  }
-};
+import { CompatibleMatch } from '@/types/oddsApiTypes';
+import { IPL_CONFIG } from '@/config/oddsApiConfig';
+import { formatTeamName, getTeamAbbreviation, createShortTitle } from '@/utils/teamUtils';
 
 // Format date for display
 function formatDate(dateString: string): string {
@@ -81,26 +23,55 @@ function formatDate(dateString: string): string {
   });
 }
 
+// Format odds with rupee symbol
+const formatOdds = (odds: number | undefined) => {
+  if (!odds) return '-';
+  return `₹${odds.toFixed(2)}`;
+};
+
 export default function CricketMatchPage() {
   const router = useRouter();
   const { matchId } = router.query;
   const [loading, setLoading] = useState(true);
-  const [match, setMatch] = useState<CricketFixture | null>(null);
+  const [match, setMatch] = useState<CompatibleMatch | null>(null);
   const [activeMarket, setActiveMarket] = useState<BettingMarket>('match-winner');
   const [betslipOpen, setBetslipOpen] = useState(false);
 
   useEffect(() => {
     if (!matchId) return;
 
-    // Simulate API fetch
-    setLoading(true);
-    setTimeout(() => {
-      const foundMatch = MOCK_FIXTURES[matchId as string] || null;
-      if (foundMatch) {
-        setMatch(foundMatch);
+    const fetchMatchDetails = async () => {
+      setLoading(true);
+      try {
+        // Fetch from our API route
+        const response = await fetch(`/api/cricket/match/${matchId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch match details: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.status && data.data) {
+          console.log("Match data received:", data.data);
+          
+          // Format the team names before setting the match data
+          const matchData = data.data;
+          matchData.localteam_name = formatTeamName(matchData.localteam_name);
+          matchData.visitorteam_name = formatTeamName(matchData.visitorteam_name);
+          matchData.title = `${matchData.localteam_name} vs ${matchData.visitorteam_name}`;
+          matchData.short_title = createShortTitle(matchData.localteam_name, matchData.visitorteam_name);
+          
+          setMatch(matchData);
+        } else {
+          throw new Error(data.message || 'Failed to get match data');
+        }
+      } catch (err) {
+        console.error('Error fetching match details:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }, 300); // Simulate loading delay
+    };
+    
+    fetchMatchDetails();
   }, [matchId]);
 
   const handleSelectOdds = (selection: any) => {
@@ -127,8 +98,8 @@ export default function CricketMatchPage() {
         <div className="flex-1 p-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Match not found</h1>
-            <Link href="/cricket" className="text-purple-400 hover:text-purple-300">
-              ← Back to Cricket
+            <Link href="/cricket/ipl" className="text-purple-400 hover:text-purple-300">
+              ← Back to IPL Cricket
             </Link>
           </div>
         </div>
@@ -136,17 +107,38 @@ export default function CricketMatchPage() {
     );
   }
 
-  const team1Name = CRICKET_TEAM_NAMES[match.localteam_id] || `Team ${match.localteam_id}`;
-  const team2Name = CRICKET_TEAM_NAMES[match.visitorteam_id] || `Team ${match.visitorteam_id}`;
-  const matchTitle = `${team1Name} vs ${team2Name}`;
-  const matchDate = formatDate(match.starting_at);
-  const isLive = match.status === 'live';
+  // Get team names from match (already formatted by now)
+  const homeTeam = match.localteam_name;
+  const awayTeam = match.visitorteam_name;
+  
+  // Get abbreviations
+  const homeAbbr = getTeamAbbreviation(homeTeam);
+  const awayAbbr = getTeamAbbreviation(awayTeam);
+  
+  // Make sure we use proper formatted names
+  const matchTitle = `${homeTeam} vs ${awayTeam}`;
+  const shortTitle = `${homeAbbr} vs ${awayAbbr}`;
+  const matchDate = match.date ? formatDate(`${match.date}T${match.time}`) : 'TBD';
+  const isLive = match.is_live || match.status === 'live';
+
+  // Get betting odds
+  const homeOdds = match.betting_odds?.match_winner?.[homeTeam];
+  const awayOdds = match.betting_odds?.match_winner?.[awayTeam];
+
+  const availableMarkets: BettingMarket[] = [
+    'match-winner',
+    'top-batsman',
+    'top-bowler',
+    'over-under',
+    'session',
+    'next-wicket'
+  ];
 
   return (
     <>
       <Head>
-        <title>{matchTitle} Betting - Foxxy</title>
-        <meta name="description" content={`Cricket betting for ${matchTitle} on Foxxy`} />
+        <title>{matchTitle} Betting - BetMaster</title>
+        <meta name="description" content={`Cricket betting for ${matchTitle} on BetMaster`} />
       </Head>
 
       <div className="flex h-screen bg-black text-white overflow-hidden">
@@ -155,8 +147,8 @@ export default function CricketMatchPage() {
           <Header />
           <div className="flex-1 overflow-y-auto p-4">
             <div className="mb-4">
-              <Link href="/cricket" className="text-purple-400 hover:text-purple-300 inline-flex items-center">
-                <span className="mr-2">←</span> Back to Cricket
+              <Link href="/cricket/ipl" className="text-purple-400 hover:text-purple-300 inline-flex items-center">
+                <span className="mr-2">←</span> Back to all IPL
               </Link>
             </div>
 
@@ -183,31 +175,30 @@ export default function CricketMatchPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        {match.venue_name}, {match.venue_city}
+                        {match.venue_name}
                       </div>
                     )}
                   </div>
                   
-                  {isLive && match.live_score && (
+                  {isLive && (
                     <div className="mt-4 p-3 bg-[#1a1f2c] rounded-lg">
                       <div className="flex justify-between mb-2">
-                        <span className="font-medium">{team1Name}</span>
+                        <span className="font-medium">{homeTeam}</span>
                         <span className="font-bold">{match.localteam_score || '0/0'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="font-medium">{team2Name}</span>
+                        <span className="font-medium">{awayTeam}</span>
                         <span className="font-bold">{match.visitorteam_score || 'Yet to bat'}</span>
                       </div>
-                      <div className="mt-2 text-sm text-gray-400">
-                        <span>{match.live_score.overs} overs • RR: {match.live_score.run_rate}</span>
-                      </div>
+                      {match.localteam_overs && (
+                        <div className="mt-2 text-sm text-gray-400">
+                          <span>{match.localteam_overs} overs</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Match statistics component */}
-                <CricketMatchStats match={match} />
-                
                 {/* Betting Markets */}
                 <div className="bg-[#0f121a] rounded-lg overflow-hidden shadow-lg">
                   <div className="p-4 bg-[#1a1f2c] border-b border-gray-700">
@@ -215,14 +206,48 @@ export default function CricketMatchPage() {
                   </div>
                   
                   <div className="p-4">
-                    <MarketTabs activeMarket={activeMarket} onChangeMarket={setActiveMarket} />
+                    <MarketTabs 
+                      activeMarket={activeMarket} 
+                      availableMarkets={availableMarkets}
+                      onSelectMarket={(market) => setActiveMarket(market)} 
+                    />
                     
                     <div className="mt-4">
-                      <CricketOddsGrid 
-                        market={activeMarket} 
-                        match={match} 
-                        onSelectOdds={handleSelectOdds} 
-                      />
+                      {activeMarket === 'match-winner' && (
+                        <div className="grid grid-cols-3 gap-4">
+                          <div 
+                            className="p-4 bg-[#1a1f2c] rounded-lg text-center cursor-pointer hover:bg-[#262c3a] transition-colors"
+                            onClick={() => handleSelectOdds({ team: homeTeam, odds: homeOdds })}
+                          >
+                            <div className="mb-2 text-gray-400">{homeTeam}</div>
+                            <div className="text-xl font-bold">
+                              {formatOdds(homeOdds)}
+                            </div>
+                          </div>
+                          <div 
+                            className="p-4 bg-[#1a1f2c] rounded-lg text-center cursor-pointer hover:bg-[#262c3a] transition-colors"
+                            onClick={() => handleSelectOdds({ team: 'Draw', odds: 450 })}
+                          >
+                            <div className="mb-2 text-gray-400">Draw</div>
+                            <div className="text-xl font-bold">₹450.00</div>
+                          </div>
+                          <div 
+                            className="p-4 bg-[#1a1f2c] rounded-lg text-center cursor-pointer hover:bg-[#262c3a] transition-colors"
+                            onClick={() => handleSelectOdds({ team: awayTeam, odds: awayOdds })}
+                          >
+                            <div className="mb-2 text-gray-400">{awayTeam}</div>
+                            <div className="text-xl font-bold">
+                              {formatOdds(awayOdds)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {activeMarket !== 'match-winner' && (
+                        <div className="p-6 text-center text-gray-400">
+                          <p>Additional betting markets coming soon</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

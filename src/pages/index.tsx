@@ -30,6 +30,12 @@ export default function Home() {
     setIsLoginModalOpen(false);
     setIsRegistrationModalOpen(true);
   };
+  
+  const handleAdd = () => {
+    console.log('Add button clicked');
+    // You can implement a modal or other functionality here
+    alert('Add new item functionality will be implemented here');
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
@@ -64,6 +70,7 @@ export default function Home() {
             >
               LOGIN
             </button>
+            
             <Link
               href="/admin"
               className="text-white text-lg uppercase tracking-wider font-medium hover:text-gray-300 transition-colors"

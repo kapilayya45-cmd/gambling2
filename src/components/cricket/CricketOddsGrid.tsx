@@ -35,7 +35,8 @@ interface SelectedOddsType {
 interface CricketOddsGridProps {
   market: BettingMarket;
   match: CricketFixture;
-  onSelectOdds: (selection: any) => void;
+  playerFilters: string[];
+  onPlaceBet: (selection: any) => void;
 }
 
 // Generate mock price levels for demonstration
@@ -52,8 +53,28 @@ const generatePriceLevels = (basePrice: number, isBack: boolean): PriceLevels[] 
 // Total number of columns in the table
 const TOTAL_COLUMNS = 8; // 1 for selection name, 3 for back, 3 for lay, 1 for min/max
 
+// Helper function to get team names from the match
+const getTeamName = (teamId: number, match: CricketFixture): string => {
+  // First check if we have a mapped name
+  if (CRICKET_TEAM_NAMES[teamId]) {
+    return CRICKET_TEAM_NAMES[teamId];
+  }
+  
+  // Next, check if we have team objects from the API
+  if (teamId === match.localteam_id && match.localteam?.name) {
+    return match.localteam.name;
+  }
+  
+  if (teamId === match.visitorteam_id && match.visitorteam?.name) {
+    return match.visitorteam.name;
+  }
+  
+  // Finally fall back to a generic name
+  return `Team ${teamId}`;
+};
+
 // Cricket Odds Grid Component
-const CricketOddsGrid: React.FC<CricketOddsGridProps> = ({ market, match, onSelectOdds }) => {
+const CricketOddsGrid: React.FC<CricketOddsGridProps> = ({ market, match, playerFilters, onPlaceBet }) => {
   // State to track the currently open bet entry row
   const [openBetRow, setOpenBetRow] = useState<string | null>(null);
   // State to store the selected odds (decoupled from live feed)
@@ -61,8 +82,11 @@ const CricketOddsGrid: React.FC<CricketOddsGridProps> = ({ market, match, onSele
   
   // Generate selections based on market type
   const generateSelections = (): MatchWinnerSelection[] => {
-    const teamA = CRICKET_TEAM_NAMES[match.localteam_id] || `Team ${match.localteam_id}`;
-    const teamB = CRICKET_TEAM_NAMES[match.visitorteam_id] || `Team ${match.visitorteam_id}`;
+    const teamA = getTeamName(match.localteam_id, match);
+    const teamB = getTeamName(match.visitorteam_id, match);
+    
+    // Log team names for debugging
+    console.log(`Displaying match: ${teamA} vs ${teamB}`);
     
     // Base prices with some variance
     const teamABasePrice = 1.85 + (Math.random() * 0.3);
@@ -176,7 +200,7 @@ const CricketOddsGrid: React.FC<CricketOddsGridProps> = ({ market, match, onSele
   
   // Handle placing a bet from the inline row
   const handlePlaceBet = (betData: any) => {
-    onSelectOdds({
+    onPlaceBet({
       matchId: match.id,
       eventId: match.id,
       selectionId: selectedOdds?.selectionId,
@@ -198,94 +222,72 @@ const CricketOddsGrid: React.FC<CricketOddsGridProps> = ({ market, match, onSele
   };
 
   return (
-    <div className="overflow-x-auto bg-[#0f121a] rounded-lg shadow-lg mb-6">
-      <table className="w-full text-white border-collapse">
+    <div className="w-full overflow-x-auto">
+      <table className="w-full border-collapse">
         <thead>
-          <tr>
-            <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-4 text-left border-b border-gray-700">
-              Selection
-            </th>
-            <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-2 text-center border-b border-gray-700">
-              Back 3
-            </th>
-            <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-2 text-center border-b border-gray-700">
-              Back 2
-            </th>
-            <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-2 text-center border-b border-gray-700">
-              Back 1
-            </th>
-            <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-2 text-center border-b border-gray-700">
-              Lay 1
-            </th>
-            <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-2 text-center border-b border-gray-700">
-              Lay 2
-            </th>
-            <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-2 text-center border-b border-gray-700">
-              Lay 3
-            </th>
-            <th className="sticky top-0 bg-[#1a1f2c] text-gray-300 font-semibold py-3 px-4 text-center border-b border-gray-700">
-              Min/Max
-            </th>
+          <tr className="bg-gray-50">
+            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Selection</th>
+            <th className="px-2 py-2 text-center text-xs font-medium text-gray-600 bg-blue-50" colSpan={3}>Back</th>
+            <th className="px-2 py-2 text-center text-xs font-medium text-gray-600 bg-red-50" colSpan={3}>Lay</th>
+            <th className="px-2 py-2 text-center text-xs font-medium text-gray-600">Min/Max</th>
           </tr>
         </thead>
         <tbody>
           {selections.map((selection, index) => (
-            <React.Fragment key={`row-${selection.id}`}>
-              <tr className={index % 2 === 0 ? 'bg-black' : 'bg-[#0a0d14]'}>
-                <td className="py-4 px-4 text-left border-b border-gray-700">
-                  <span className="font-medium">{selection.name}</span>
+            <React.Fragment key={selection.id}>
+              <tr className={`border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                <td className="px-4 py-3 text-left">
+                  <div className="font-medium text-gray-800">{selection.name}</div>
                 </td>
                 
-                {/* Back price levels */}
-                {selection.back.slice().reverse().map((level, i) => (
-                  <td 
-                    key={`back-${selection.id}-${i}`}
-                    className="p-2 text-center border-b border-gray-700 cursor-pointer select-none hover:bg-[#343b4f]"
-                    onClick={() => handlePriceClick(selection, level.price, BACK)}
-                  >
-                    <div className="px-3 py-2 rounded border border-blue-200 bg-blue-100 bg-opacity-20 text-blue-300 hover:bg-opacity-30 transition-colors">
-                      <div className="font-bold">{level.price.toFixed(2)}</div>
-                      <div className="text-xs text-gray-300">₹{level.size.toLocaleString()}</div>
-                    </div>
+                {/* Back price cells */}
+                {selection.back.map((level, i) => (
+                  <td key={`back-${i}`} className="border-r border-gray-200 p-0">
+                    <button
+                      onClick={() => handlePriceClick(selection, level.price, BACK)}
+                      className="w-full py-3 px-2 flex flex-col items-center bg-blue-50 hover:bg-blue-100 transition-colors"
+                    >
+                      <span className="text-blue-700 font-medium">{level.price.toFixed(2)}</span>
+                      <span className="text-xs text-gray-600">${level.size.toLocaleString()}</span>
+                    </button>
                   </td>
                 ))}
                 
-                {/* Lay price levels */}
+                {/* Lay price cells */}
                 {selection.lay.map((level, i) => (
-                  <td 
-                    key={`lay-${selection.id}-${i}`}
-                    className="p-2 text-center border-b border-gray-700 cursor-pointer select-none hover:bg-[#343b4f]"
-                    onClick={() => handlePriceClick(selection, level.price, LAY)}
-                  >
-                    <div className="px-3 py-2 rounded border border-red-200 bg-red-100 bg-opacity-20 text-red-300 hover:bg-opacity-30 transition-colors">
-                      <div className="font-bold">{level.price.toFixed(2)}</div>
-                      <div className="text-xs text-gray-300">₹{level.size.toLocaleString()}</div>
-                    </div>
+                  <td key={`lay-${i}`} className="border-r border-gray-200 p-0">
+                    <button
+                      onClick={() => handlePriceClick(selection, level.price, LAY)}
+                      className="w-full py-3 px-2 flex flex-col items-center bg-red-50 hover:bg-red-100 transition-colors"
+                    >
+                      <span className="text-red-700 font-medium">{level.price.toFixed(2)}</span>
+                      <span className="text-xs text-gray-600">${level.size.toLocaleString()}</span>
+                    </button>
                   </td>
                 ))}
                 
-                {/* Min/Max column */}
-                <td className="py-4 px-4 text-center border-b border-gray-700">
-                  <div className="text-xs text-gray-400 mb-1">Min</div>
-                  <div className="text-sm">₹100</div>
-                  <div className="text-xs text-gray-400 mt-2 mb-1">Max</div>
-                  <div className="text-sm">₹1,00,000</div>
+                {/* Min/Max stake */}
+                <td className="px-2 py-3 text-center">
+                  <div className="text-xs text-gray-600">
+                    <div>Min: ₹100</div>
+                    <div>Max: ₹1,00,000</div>
+                  </div>
                 </td>
               </tr>
               
-              {/* Inline bet entry row - Using selectedOdds instead of parsing from openBetRow */}
+              {/* Inline bet entry row */}
               {shouldShowBetEntry(selection.id) && selectedOdds && (
-                <tr key={`bet-${selection.id}`}>
-                  <InlineBetEntry 
-                    matchId={match.id}
-                    selectedOdds={selectedOdds.price}
-                    side={selectedOdds.side}
-                    selection={selectedOdds.selection}
-                    market={market}
-                    totalColumns={TOTAL_COLUMNS}
-                    onCancel={handleCancelBet}
-                    onPlaceBet={handlePlaceBet}
-                  />
+                <tr>
+                  <td colSpan={TOTAL_COLUMNS} className="px-0 py-0">
+                    <InlineBetEntry
+                      selection={selectedOdds.selection}
+                      market={selectedOdds.market}
+                      odds={selectedOdds.price}
+                      side={selectedOdds.side}
+                      onCancel={handleCancelBet}
+                      onPlaceBet={handlePlaceBet}
+                    />
+                  </td>
                 </tr>
               )}
             </React.Fragment>

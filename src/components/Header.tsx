@@ -1,76 +1,111 @@
-import React, { useState } from 'react';
-import Button from './Button';
+// src/components/Header.tsx
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdmin } from '@/contexts/AdminContext';
+import Button from './Button';
 import Balance from './Balance';
+import CoinBalance from './CoinBalance';
 import LoginModal from './LoginModal';
 import RegistrationModal from './RegistrationModal';
 import UserProfile from './UserProfile';
-import Link from 'next/link';
 import Logo from './Logo';
-import CoinBalance from './CoinBalance';
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
 
-const Header = () => {
-  const { currentUser } = useAuth();
-  const { isAdmin } = useAdmin();
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+interface HeaderProps {
+  onAdd?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onAdd }) => {
+  const { 
+    currentUser, 
+    isAdmin, 
+    isSuperadmin, 
+    coinBalance 
+  } = useAuth();
+
+  const [isLoginModalOpen, setIsLoginModalOpen]     = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen]   = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  // Debug
+  useEffect(() => {
+    if (currentUser) {
+      console.log('User:', currentUser.email);
+      console.log('isAdmin:', isAdmin, 'isSuperadmin:', isSuperadmin);
+      console.log('coinBalance:', coinBalance);
+    }
+  }, [currentUser, isAdmin, isSuperadmin, coinBalance]);
+
   return (
-    <header className="bg-[#1a1f2c] px-4 py-3 flex justify-between items-center shadow-lg border-b border-[#2a3040]">
-      {/* Left section with logo/title */}
-      <div className="flex items-center">
-        <div className="flex flex-shrink-0 items-center">
-          <Logo className="w-14 h-14 relative" />
-          <h1 className="ml-2 text-xl font-bold text-white tracking-tight">Foxxy</h1>
-        </div>
+    <header className="bg-white px-4 py-3 flex justify-between items-center shadow-lg border-b border-gray-200">
+      {/* ───── Left ───── */}
+      <div className="flex items-center space-x-4">
+        <Logo className="w-14 h-14 relative" />
+        <h1 className="text-xl font-bold text-gray-800 tracking-tight">Foxxy</h1>
+
+        <nav className="hidden md:flex items-center space-x-6">
+          { /* Show Admin link to both admins and superadmins */ }
+          {(isAdmin || isSuperadmin) && (
+            <Link href="/admin" className="text-gray-800 uppercase tracking-wide hover:text-gray-600">
+              Admin
+            </Link>
+          )}
+
+          { /* Superadmin gets an extra link */ }
+          {isSuperadmin && (
+            <Link href="/superadmin" className="flex items-center text-purple-600 uppercase tracking-wide hover:text-purple-800">
+              <Plus className="w-4 h-4 mr-1" /> Superadmin
+            </Link>
+          )}
+        </nav>
       </div>
-      
-      {/* Right section with balance and actions */}
+
+      {/* ───── Right ───── */}
       <div className="flex items-center space-x-3">
-        {/* Coin Balance display */}
         {currentUser && (
-          <CoinBalance className="hidden sm:flex mr-2" />
+          <>
+            { /* Regular users and admins alike see their coin & cash balances */ }
+            <CoinBalance className="hidden sm:flex mr-2" />
+            <Balance     className="mr-3" />
+          </>
         )}
-        
-        {/* Balance display */}
-        {currentUser && (
-          <Balance className="mr-3" />
-        )}
-        
-        {/* Action buttons */}
+
         {currentUser ? (
-          <div className="flex items-center">
-            <button 
-              className="flex items-center space-x-2 bg-[#2a3040] hover:bg-[#343b4f] rounded-full px-3 py-1.5 transition-colors"
-              onClick={() => setIsProfileModalOpen(true)}
-            >
-              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                {currentUser.displayName 
-                  ? currentUser.displayName.charAt(0).toUpperCase() 
-                  : currentUser.email?.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-white font-medium hidden md:block">
-                {currentUser.displayName || currentUser.email?.split('@')[0] || 'User'}
+          <button
+            onClick={() => setIsProfileModalOpen(true)}
+            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1.5 transition-colors"
+          >
+            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+              {currentUser.displayName
+                ? currentUser.displayName.charAt(0).toUpperCase()
+                : currentUser.email?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <span className="text-gray-800 hidden md:inline">
+              {currentUser.displayName || currentUser.email?.split('@')[0]}
+            </span>
+            {isAdmin && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs bg-green-100 text-green-800 rounded-full hidden md:inline">
+                Admin
               </span>
-              {isAdmin && (
-                <span className="ml-1 text-xs bg-green-800 text-green-300 px-1.5 py-0.5 rounded-full hidden md:inline-block">
-                  Admin
-                </span>
-              )}
-            </button>
-          </div>
+            )}
+            {isSuperadmin && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-800 rounded-full hidden md:inline">
+                Superadmin
+              </span>
+            )}
+          </button>
         ) : (
           <div className="flex space-x-2">
-            <Button 
-              className="bg-transparent border border-[#2a3040] hover:bg-[#2a3040] text-sm font-medium px-3 py-1.5"
+            <Button
+              className="bg-transparent border border-gray-200 hover:bg-gray-100 text-gray-800 text-sm px-3 py-1.5"
               onClick={() => setIsLoginModalOpen(true)}
             >
               Login
             </Button>
-            <Button 
-              className="bg-purple-600 hover:bg-purple-700 text-sm font-medium px-3 py-1.5 hidden sm:block"
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-1.5"
               onClick={() => setIsSignupModalOpen(true)}
             >
               Sign Up
@@ -78,32 +113,30 @@ const Header = () => {
           </div>
         )}
       </div>
-      
-      {/* Modals */}
-      <LoginModal 
-        isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
+
+      { /* ───── Modals ───── */ }
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
         onSwitchToSignup={() => {
           setIsLoginModalOpen(false);
           setIsSignupModalOpen(true);
-        }} 
+        }}
       />
-      
-      <RegistrationModal 
-        isOpen={isSignupModalOpen} 
-        onClose={() => setIsSignupModalOpen(false)} 
+      <RegistrationModal
+        isOpen={isSignupModalOpen}
+        onClose={() => setIsSignupModalOpen(false)}
         onSwitchToLogin={() => {
           setIsSignupModalOpen(false);
           setIsLoginModalOpen(true);
-        }} 
+        }}
       />
-      
-      <UserProfile 
-        isOpen={isProfileModalOpen} 
-        onClose={() => setIsProfileModalOpen(false)} 
+      <UserProfile
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
       />
     </header>
   );
 };
 
-export default Header; 
+export default Header;

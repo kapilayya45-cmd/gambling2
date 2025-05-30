@@ -1,11 +1,11 @@
 // src/constants/leagues.ts
 
 export interface LeagueConfig {
-  /** SportMonks league ID */
+  /** Entity Sports competition ID for cricket, SportMonks league ID for football */
   id: number;
   /** Human-readable competition name */
   name: string;
-  /** SportMonks current_season_id for this competition */
+  /** Entity Sports season ID for cricket, SportMonks current_season_id for football */
   seasonId: number;
 }
 
@@ -14,7 +14,7 @@ export const CRICKET_LEAGUES: LeagueConfig[] = [
   {
     id: 1,  // IPL (Indian Premier League)
     name: 'IPL (Indian Premier League)',
-    seasonId: 1689,  // Current 2024 IPL season ID
+    seasonId: 111,  // Entity Sports IPL competition ID
   },
   {
     id: 8,  // Pakistan Super League

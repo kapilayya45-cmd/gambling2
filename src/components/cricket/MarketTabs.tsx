@@ -21,26 +21,29 @@ const MARKET_NAMES: Record<BettingMarket, string> = {
 
 interface MarketTabsProps {
   activeMarket: BettingMarket;
-  onChangeMarket: (market: BettingMarket) => void;
+  availableMarkets: BettingMarket[];
+  onSelectMarket: (market: BettingMarket) => void;
 }
 
-const MarketTabs: React.FC<MarketTabsProps> = ({ activeMarket, onChangeMarket }) => {
-  const marketKeys = Object.keys(MARKET_NAMES) as BettingMarket[];
-  
+const MarketTabs: React.FC<MarketTabsProps> = ({ 
+  activeMarket, 
+  availableMarkets,
+  onSelectMarket
+}) => {
   return (
     <div className="mb-6">
       {/* Desktop view: Tabs */}
       <div className="hidden md:block">
-        <div className="border-b border-[#2a3040] mb-4">
+        <div className="border-b border-gray-200 mb-4">
           <div className="flex overflow-x-auto hide-scrollbar">
-            {marketKeys.map(market => (
+            {availableMarkets.map(market => (
               <button
                 key={market}
-                onClick={() => onChangeMarket(market)}
+                onClick={() => onSelectMarket(market)}
                 className={`px-4 py-3 text-sm font-medium whitespace-nowrap focus:outline-none
                   ${activeMarket === market 
-                    ? 'text-[#25b95f] border-b-2 border-[#25b95f]' 
-                    : 'text-gray-400 hover:text-white'
+                    ? 'text-purple-600 border-b-2 border-purple-600' 
+                    : 'text-gray-600 hover:text-gray-900'
                   }`}
               >
                 {MARKET_NAMES[market]}
@@ -54,10 +57,10 @@ const MarketTabs: React.FC<MarketTabsProps> = ({ activeMarket, onChangeMarket })
       <div className="md:hidden mb-4">
         <select
           value={activeMarket}
-          onChange={(e) => onChangeMarket(e.target.value as BettingMarket)}
-          className="w-full bg-[#11151f] border border-[#2a3040] rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-[#25b95f]"
+          onChange={(e) => onSelectMarket(e.target.value as BettingMarket)}
+          className="w-full bg-white border border-gray-300 rounded-md py-2 px-3 text-gray-800 focus:outline-none focus:ring-1 focus:ring-purple-600"
         >
-          {marketKeys.map(market => (
+          {availableMarkets.map(market => (
             <option key={market} value={market}>
               {MARKET_NAMES[market]}
             </option>
@@ -66,19 +69,19 @@ const MarketTabs: React.FC<MarketTabsProps> = ({ activeMarket, onChangeMarket })
       </div>
       
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-white">
+        <h2 className="text-xl font-bold text-gray-800">
           {MARKET_NAMES[activeMarket]}
         </h2>
         
         {/* Odds format selector */}
         <div className="flex text-xs">
-          <button className="bg-[#11151f] px-2 py-1 text-white rounded-l-md border border-[#2a3040]">
+          <button className="bg-white px-2 py-1 text-gray-800 rounded-l-md border border-gray-300 font-medium">
             Decimal
           </button>
-          <button className="bg-[#0f121a] px-2 py-1 text-gray-400 border-t border-b border-[#2a3040]">
+          <button className="bg-gray-50 px-2 py-1 text-gray-600 border-t border-b border-gray-300">
             Fractional
           </button>
-          <button className="bg-[#0f121a] px-2 py-1 text-gray-400 rounded-r-md border border-[#2a3040]">
+          <button className="bg-gray-50 px-2 py-1 text-gray-600 rounded-r-md border border-gray-300">
             American
           </button>
         </div>

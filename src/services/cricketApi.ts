@@ -1,129 +1,127 @@
 // src/services/cricketApi.ts
-const BASE = 'https://cricket.sportmonks.com/api/v2.0';
-// Hard-coded SportMonks API token for testing
-const TOKEN = 'Z2rnDHZxgnxm79ERrw6Y5gFieZ8A6bXdvh3RzdBjseoQMhWQkznyCZIbzqzT';
+import { getIPLMatches, getLiveIPLMatches, getMatchDetails } from './oddsApiService';
+import type { CompatibleMatch } from '@/types/oddsApiTypes';
 
-export interface CricketFixture {
-  id:             number;
-  league_id:      number;
-  localteam_id:   number;
-  visitorteam_id: number;
-  starting_at:    string;
-  // …add any other fields you need
-  localteam_score?: string;
-  visitorteam_score?: string;
-  status?: string;
-  venue_name?: string;
-  venue_city?: string;
-  venue_capacity?: number;
-  toss_winner_team_id?: number;
-  toss_decision?: string;
-  lineup?: any[];
-  live_score?: {
-    runs: number;
-    wickets: number;
-    overs: number;
-    run_rate: number;
-  };
-}
-
-// Mock IPL fixtures for development and testing
-const MOCK_IPL_FIXTURES: CricketFixture[] = [
-  {
-    id: 1001,
-    league_id: 1, // IPL
-    localteam_id: 101,
-    visitorteam_id: 102,
-    starting_at: new Date(Date.now() - 40 * 60000).toISOString(), // started 40 min ago
-    localteam_score: '128/4',
-    visitorteam_score: '',
-    status: 'live',
-    venue_name: 'Wankhede Stadium',
-    venue_city: 'Mumbai',
-    venue_capacity: 33000,
-    toss_winner_team_id: 101,
-    toss_decision: 'bat',
-    live_score: {
-      runs: 128,
-      wickets: 4,
-      overs: 14.2,
-      run_rate: 8.94
-    }
-  },
-  {
-    id: 1002,
-    league_id: 1, // IPL
-    localteam_id: 103,
-    visitorteam_id: 104,
-    starting_at: new Date(Date.now() + 90 * 60000).toISOString(), // starts in 90 min
-    status: 'notstarted',
-    venue_name: 'M. Chinnaswamy Stadium',
-    venue_city: 'Bangalore',
-    venue_capacity: 40000
-  },
-  {
-    id: 1003,
-    league_id: 1, // IPL
-    localteam_id: 105,
-    visitorteam_id: 106,
-    starting_at: new Date(Date.now() + 180 * 60000).toISOString(), // starts in 3 hours
-    status: 'notstarted',
-    venue_name: 'Feroz Shah Kotla',
-    venue_city: 'Delhi',
-    venue_capacity: 41000
-  }
-];
+// Local proxy API endpoints to avoid CORS issues
+const LOCAL_LIVESCORES_API = '/api/cricket/livescores';
+const LOCAL_FIXTURES_API = '/api/cricket/fixtures';
 
 // Team name mapping for UI presentation
-export const CRICKET_TEAM_NAMES: Record<number, string> = {
-  101: 'Mumbai Indians',
-  102: 'Chennai Super Kings',
-  103: 'Royal Challengers Bangalore',
-  104: 'Kolkata Knight Riders',
-  105: 'Delhi Capitals',
-  106: 'Rajasthan Royals',
-  107: 'Sunrisers Hyderabad',
-  108: 'Punjab Kings'
+export const CRICKET_TEAM_NAMES: Record<string, string> = {
+  // Common IPL team mappings
+  'MI': 'Mumbai Indians',
+  'CSK': 'Chennai Super Kings',
+  'RCB': 'Royal Challengers Bangalore',
+  'KKR': 'Kolkata Knight Riders',
+  'DC': 'Delhi Capitals',
+  'RR': 'Rajasthan Royals',
+  'SRH': 'Sunrisers Hyderabad',
+  'PBKS': 'Punjab Kings',
+  'GT': 'Gujarat Titans',
+  'LSG': 'Lucknow Super Giants'
 };
 
+// Re-export the types
+export type { CompatibleMatch };
+
 /**
- * Fetch upcoming fixtures for a given season
+ * Fetch live cricket matches
  */
-export async function fetchCricketFixturesBySeason(
-  seasonId: number
-): Promise<CricketFixture[]> {
-  // Using mock data for development to avoid API errors
-  return MOCK_IPL_FIXTURES.filter(fixture => fixture.league_id === seasonId);
-  
-  /* Real API implementation:
+export async function fetchCricketLivescores(): Promise<CompatibleMatch[]> {
   try {
-    const url = `${BASE}/fixtures/season/${seasonId}?api_token=${TOKEN}`;
-    const res = await fetch(url);
-    const json = await res.json();
-    return json.data || [];
+    console.log('Fetching live cricket scores from API...');
+    
+    // Try to fetch data from our proxy API first
+    try {
+      const proxyRes = await fetch(LOCAL_LIVESCORES_API);
+      if (proxyRes.ok) {
+        const data = await proxyRes.json();
+        if (data.data && data.data.length > 0) {
+          console.log('Successfully fetched data from proxy API');
+          return data.data;
+        }
+      }
+    } catch (proxyError) {
+      console.warn('Failed to fetch from proxy API, trying direct API...');
+    }
+    
+    // Use the ODDS API implementation
+    return await getLiveIPLMatches();
   } catch (error) {
-    console.warn('Failed to fetch cricket fixtures, using mock data:', error);
-    return MOCK_IPL_FIXTURES.filter(fixture => fixture.league_id === seasonId);
+    console.error('Failed to fetch cricket livescores:', error);
+    throw error;
   }
-  */
 }
 
 /**
- * Fetch live matches (ball-by-ball) across all leagues
+ * Helper function to update the team names mapping
  */
-export async function fetchCricketLivescores(): Promise<CricketFixture[]> {
-  // Using mock data for development to avoid API errors
-  return MOCK_IPL_FIXTURES;
-  
-  /* Real API implementation:
+function updateTeamNames(matches: CompatibleMatch[]) {
+  matches.forEach((match: CompatibleMatch) => {
+    // Adapt this to match the new structure from ODDS API
+    const localTeamCode = match.localteam_id?.split('_')[0]?.toUpperCase();
+    const visitorTeamCode = match.visitorteam_id?.split('_')[0]?.toUpperCase();
+    
+    if (localTeamCode && !CRICKET_TEAM_NAMES[localTeamCode]) {
+      CRICKET_TEAM_NAMES[localTeamCode] = match.localteam_name || '';
+    }
+    
+    if (visitorTeamCode && !CRICKET_TEAM_NAMES[visitorTeamCode]) {
+      CRICKET_TEAM_NAMES[visitorTeamCode] = match.visitorteam_name || '';
+    }
+  });
+}
+
+/**
+ * Fetch IPL matches specifically
+ */
+export async function fetchIPLMatchesWithFallback(): Promise<CompatibleMatch[]> {
+  console.log('Fetching IPL matches specifically...');
   try {
-    const url = `${BASE}/livescores?api_token=${TOKEN}`;
-    const res = await fetch(url);
-    const json = await res.json();
-    return json.data || [];
+    let iplMatches: CompatibleMatch[] = [];
+    
+    // First try: fetch via our proxy API
+    try {
+      console.log('1. Checking for IPL matches via proxy API...');
+      const fixturesRes = await fetch(LOCAL_FIXTURES_API);
+      
+      if (fixturesRes.ok) {
+        const fixturesJson = await fixturesRes.json();
+        
+        if (fixturesJson.data && fixturesJson.data.length > 0) {
+          console.log(`Found ${fixturesJson.data.length} IPL fixtures via proxy`);
+          updateTeamNames(fixturesJson.data);
+          return fixturesJson.data;
+        }
+      }
+    } catch (proxyError) {
+      console.warn('Failed to fetch via proxy:', proxyError);
+    }
+    
+    // Use the ODDS API implementation
+    iplMatches = await getIPLMatches();
+    
+    if (iplMatches && iplMatches.length > 0) {
+      console.log(`Found ${iplMatches.length} IPL matches via ODDS API`);
+      updateTeamNames(iplMatches);
+      return iplMatches;
+    }
+    
+    throw new Error('No IPL matches found in any API call');
   } catch (error) {
-    console.warn('Failed to fetch cricket livescores, using mock data:', error);
-    return MOCK_IPL_FIXTURES;
+    console.error('Failed to fetch IPL matches:', error);
+    throw error;
   }
-  */
-} 
+}
+
+/**
+ * For backward compatibility
+ */
+export const fetchCricketFixturesBySeason = fetchIPLMatchesWithFallback;
+
+/**
+ * For backward compatibility
+ */
+export async function fetchSeasonFixtures(): Promise<any> {
+  return { data: await fetchIPLMatchesWithFallback() };
+}

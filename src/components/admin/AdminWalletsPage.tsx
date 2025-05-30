@@ -33,44 +33,50 @@ const AdminWalletsPage: React.FC = () => {
     try {
       let transactionsQuery;
       
-      // Base query
-      let baseQuery = query(
-        collection(db, 'transactions'),
-        where('type', 'in', ['deposit', 'withdrawal']),
-        orderBy('createdAt', 'desc')
-      );
-      
-      // Apply type filter
-      if (activeTab === 'deposits') {
-        baseQuery = query(
+      // Simplified queries to avoid composite index issues
+      if (activeTab === 'all' && statusFilter === 'all') {
+        // Simple query with just type and orderBy
+        transactionsQuery = query(
           collection(db, 'transactions'),
-          where('type', '==', 'deposit'),
+          where('type', 'in', ['deposit', 'withdrawal']),
           orderBy('createdAt', 'desc')
         );
-      } else if (activeTab === 'withdrawals') {
-        baseQuery = query(
+      } else if (activeTab !== 'all' && statusFilter === 'all') {
+        // Filter by transaction type only
+        transactionsQuery = query(
           collection(db, 'transactions'),
-          where('type', '==', 'withdrawal'),
+          where('type', '==', activeTab === 'deposits' ? 'deposit' : 'withdrawal'),
+          orderBy('createdAt', 'desc')
+        );
+      } else if (activeTab === 'all' && statusFilter !== 'all') {
+        // For filtering by status on all types, we'll fetch and filter in memory
+        // This avoids the need for a composite index on type+status+createdAt
+        transactionsQuery = query(
+          collection(db, 'transactions'),
+          where('type', 'in', ['deposit', 'withdrawal']),
+          orderBy('createdAt', 'desc')
+        );
+      } else {
+        // For specific type and status, we'll use a simpler query
+        // This only requires an index on type+createdAt which should already exist
+        transactionsQuery = query(
+          collection(db, 'transactions'),
+          where('type', '==', activeTab === 'deposits' ? 'deposit' : 'withdrawal'),
           orderBy('createdAt', 'desc')
         );
       }
       
-      // Apply status filter if needed
-      if (statusFilter !== 'all') {
-        baseQuery = query(
-          collection(db, 'transactions'),
-          where('type', activeTab === 'all' ? 'in' : '==', activeTab === 'all' ? ['deposit', 'withdrawal'] : activeTab === 'deposits' ? 'deposit' : 'withdrawal'),
-          where('status', '==', statusFilter),
-          orderBy('createdAt', 'desc')
-        );
-      }
-      
-      const transactionsSnapshot = await getDocs(baseQuery);
+      const transactionsSnapshot = await getDocs(transactionsQuery);
       
       // Process transaction data and fetch user emails
       const transactionsData = await Promise.all(transactionsSnapshot.docs.map(async docSnap => {
         const transaction = docSnap.data() as WalletTransaction;
         transaction.id = docSnap.id;
+        
+        // Skip transactions that don't match our status filter if we're doing in-memory filtering
+        if (statusFilter !== 'all' && transaction.status !== statusFilter) {
+          return null;
+        }
         
         // Get user email if userId exists
         if (transaction.userId) {
@@ -89,7 +95,8 @@ const AdminWalletsPage: React.FC = () => {
         return transaction;
       }));
       
-      setTransactions(transactionsData);
+      // Filter out null values (from status filtering) and set transactions
+      setTransactions(transactionsData.filter(Boolean) as WalletTransaction[]);
     } catch (error) {
       console.error("Error fetching wallet transactions:", error);
     } finally {

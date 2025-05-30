@@ -57,6 +57,12 @@ const CasinoIcon = () => (
   </svg>
 );
 
+const WalletIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+  </svg>
+);
+
 const PromotionsIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
@@ -167,6 +173,7 @@ interface SportCategory {
 const navigationItems: NavigationItem[] = [
   { id: 'feed', name: 'My Feed', icon: <FeedIcon />, href: '/feed' },
   { id: 'casino', name: 'Casino', icon: <CasinoIcon />, href: '/casino' },
+  { id: 'wallet', name: 'My Wallet', icon: <WalletIcon />, href: '/wallet' },
   { id: 'betslip', name: 'Betslip', icon: <BetslipIcon />, href: '/betslip' },
   { id: 'news', name: 'News', icon: <NewsIcon />, href: '/news' },
 ];
@@ -182,7 +189,7 @@ const sportsCategories: SportCategory[] = [
   { id: 'multi-markets', name: 'Multi Markets', icon: <MultiMarketIcon />, href: '/multi-markets', count: 20 },
 ];
 
-// Legacy league constants - can be removed after full migration to SportMonks API
+// Legacy league constants - can be removed after full migration to Entity Sports API
 const OLD_CRICKET_LEAGUES = [
   { id: '4328', name: 'Ball by Ball' },
   { id: '4387', name: 'IPL' },
@@ -238,7 +245,7 @@ const Sidebar: React.FC = () => {
   const router = useRouter();
   const { isAdmin } = useAdmin();
   const { currentUser } = useAuth();
-  const { status: sportMonksStatus } = useLeagueStatus();
+  const { status: entitySportsStatus } = useLeagueStatus();
   const basketballStatus = useBasketballStatus();
 
   // State for tracking sports section open/closed
@@ -432,7 +439,7 @@ const Sidebar: React.FC = () => {
   // Check if any sport is active
   const isSportActive = Object.keys(leagueIds).some(sport => sport === activeItem);
 
-  // Helper function to render cricket league links from SportMonks API
+  // Helper function to render cricket league links from Entity Sports API
   const renderCricketLeague = (lg) => (
     <li key={lg.id} className="flex items-center px-3 py-2 rounded hover:bg-[#2a3040]">
       <Link href={`/cricket/${lg.id}`} legacyBehavior>
@@ -440,10 +447,10 @@ const Sidebar: React.FC = () => {
           {lg.name}
         </a>
       </Link>
-      {sportMonksStatus[lg.id]?.live && (
+      {entitySportsStatus[lg.id]?.live && (
         <span className="ml-auto bg-red-500 text-xs text-white px-1 rounded">LIVE</span>
       )}
-      {!sportMonksStatus[lg.id]?.live && sportMonksStatus[lg.id]?.inSeason && (
+      {!entitySportsStatus[lg.id]?.live && entitySportsStatus[lg.id]?.inSeason && (
         <span className="ml-auto bg-green-500 text-xs text-white px-1 rounded">IN SEASON</span>
       )}
     </li>
@@ -457,10 +464,10 @@ const Sidebar: React.FC = () => {
           {lg.name}
         </a>
       </Link>
-      {sportMonksStatus[lg.id]?.live && (
+      {entitySportsStatus[lg.id]?.live && (
         <span className="ml-auto bg-red-500 text-xs text-white px-1 rounded">LIVE</span>
       )}
-      {!sportMonksStatus[lg.id]?.live && sportMonksStatus[lg.id]?.inSeason && (
+      {!entitySportsStatus[lg.id]?.live && entitySportsStatus[lg.id]?.inSeason && (
         <span className="ml-auto bg-green-500 text-xs text-white px-1 rounded">IN SEASON</span>
       )}
     </li>
@@ -528,10 +535,10 @@ const Sidebar: React.FC = () => {
   }, []);
 
   return (
-    <aside className="w-60 bg-black h-full overflow-y-auto hidden md:block shadow-lg">
+    <aside className="w-60 bg-white h-full overflow-y-auto hidden md:block shadow-lg">
       {/* User Profile Area */}
       <div
-        className="flex items-center px-4 py-5 border-b border-[#2a2a2a] hover:bg-[#0f0f0f] cursor-pointer"
+        className="flex items-center px-4 py-5 border-b border-gray-200 hover:bg-gray-100 cursor-pointer"
         onClick={handleProfileClick}
       >
         {currentUser ? (
@@ -540,11 +547,11 @@ const Sidebar: React.FC = () => {
               {userInitial}
             </div>
             <div className="ml-3 overflow-hidden">
-              <p className="text-white font-medium truncate max-w-[160px]">
+              <p className="text-gray-800 font-medium truncate max-w-[160px]">
                 {userDisplayName}
               </p>
               {currentUser.email && userDisplayName !== currentUser.email && (
-                <p className="text-xs text-gray-400 truncate max-w-[160px]">
+                <p className="text-xs text-gray-500 truncate max-w-[160px]">
                   {currentUser.email}
                 </p>
               )}
@@ -553,15 +560,15 @@ const Sidebar: React.FC = () => {
         ) : (
           <>
             <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 5C27 5 33 11 33 20C33 29 27 35 20 35C13 35 7 29 7 20C7 11 13 5 20 5Z" fill="#111" fillOpacity="0.7" stroke="#8A2BE2" strokeWidth="1.5" />
+              <path d="M20 5C27 5 33 11 33 20C33 29 27 35 20 35C13 35 7 29 7 20C7 11 13 5 20 5Z" fill="#f5f5f5" fillOpacity="0.7" stroke="#8A2BE2" strokeWidth="1.5" />
               <path d="M20 10C25 10 29 14 29 19C29 24 25 28 20 28" stroke="#FF00FF" strokeWidth="1.5" />
               <path d="M20 10C15 10 11 14 11 19C11 24 15 28 20 28" stroke="#FF69B4" strokeWidth="1.5" />
               <path d="M14 16L16 18L18 16M22 16L24 18L26 16" stroke="#FF00FF" strokeWidth="1.5" />
               <path d="M16 20C18 22 22 22 24 20" stroke="#FF69B4" strokeWidth="1.5" />
-              <rect x="10" y="14" width="4" height="6" rx="1" fill="#222" stroke="#FF69B4" strokeWidth="0.5" />
-              <rect x="26" y="14" width="4" height="6" rx="1" fill="#222" stroke="#FF00FF" strokeWidth="0.5" />
+              <rect x="10" y="14" width="4" height="6" rx="1" fill="#f8f8f8" stroke="#FF69B4" strokeWidth="0.5" />
+              <rect x="26" y="14" width="4" height="6" rx="1" fill="#f8f8f8" stroke="#FF00FF" strokeWidth="0.5" />
             </svg>
-            <span className="ml-2 text-2xl font-bold text-white">Foxxy</span>
+            <span className="ml-2 text-2xl font-bold text-gray-800">Foxxy</span>
           </>
         )}
       </div>
@@ -578,13 +585,13 @@ const Sidebar: React.FC = () => {
           <a 
             className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
               activeItem === 'feed'
-                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
             }`}
           >
             <div
               className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                activeItem === 'feed' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                activeItem === 'feed' ? 'bg-purple-200' : 'bg-gray-200'
               }`}
             >
               <FeedIcon />
@@ -598,14 +605,14 @@ const Sidebar: React.FC = () => {
           <div 
             className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
               isSportActive
-                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
             }`}
             onClick={toggleSportsSection}
           >
             <div
               className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                isSportActive ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                isSportActive ? 'bg-purple-200' : 'bg-gray-200'
               }`}
             >
               <SportsIcon />
@@ -624,14 +631,14 @@ const Sidebar: React.FC = () => {
                 <div
                   className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                     activeItem === 'cricket'
-                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                   }`}
                   onClick={toggleCricketOpen}
                 >
                   <div
                     className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'cricket' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                      activeItem === 'cricket' ? 'bg-purple-200' : 'bg-gray-200'
                     }`}
                   >
                     <CricketIcon />
@@ -648,7 +655,7 @@ const Sidebar: React.FC = () => {
                     {/* IPL Sub-Header */}
                     <li>
                       <div
-                        className="flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer text-gray-400 hover:bg-[#121212] hover:text-white"
+                        className="flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer text-gray-600 hover:bg-gray-100 hover:text-gray-800"
                         onClick={toggleIPLOpen}
                       >
                         <span className="font-medium text-sm">IPL</span>
@@ -661,9 +668,9 @@ const Sidebar: React.FC = () => {
                       {isIPLOpen && (
                         <ul className="pl-6 space-y-1 mt-1">
                           {/* All IPL Matches Link */}
-                          <li className="flex items-center px-3 py-2 rounded hover:bg-[#2a3040]">
+                          <li className="flex items-center px-3 py-2 rounded hover:bg-gray-100">
                             <Link href="/cricket/ipl/bet" legacyBehavior>
-                              <a className="flex-1 text-gray-300 hover:text-white text-sm">
+                              <a className="flex-1 text-gray-600 hover:text-gray-800 text-sm">
                                 All IPL Matches
                               </a>
                             </Link>
@@ -682,9 +689,9 @@ const Sidebar: React.FC = () => {
                             const teamASlug = slugify(teamA);
                             
                             return (
-                              <li key={index} className="flex items-center px-3 py-2 rounded hover:bg-[#2a3040]">
+                              <li key={index} className="flex items-center px-3 py-2 rounded hover:bg-gray-100">
                                 <Link href={`/cricket/ipl/bet?team=${teamASlug}`} legacyBehavior>
-                                  <a className="flex-1 text-gray-300 hover:text-white text-sm">
+                                  <a className="flex-1 text-gray-600 hover:text-gray-800 text-sm">
                                     {match}
                                   </a>
                                 </Link>
@@ -706,14 +713,14 @@ const Sidebar: React.FC = () => {
                 <div
                   className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                     activeItem === 'football'
-                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                   }`}
                   onClick={() => setIsFootballOpen(!isFootballOpen)}
                 >
                   <div
                     className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'football' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                      activeItem === 'football' ? 'bg-purple-200' : 'bg-gray-200'
                     }`}
                   >
                     <FootballIcon />
@@ -737,14 +744,14 @@ const Sidebar: React.FC = () => {
                 <div
                   className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                     activeItem === 'basketball'
-                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                   }`}
                   onClick={() => setIsBasketballOpen(!isBasketballOpen)}
                 >
                   <div
                     className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'basketball' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                      activeItem === 'basketball' ? 'bg-purple-200' : 'bg-gray-200'
                     }`}
                   >
                     <BasketballIcon />
@@ -768,14 +775,14 @@ const Sidebar: React.FC = () => {
                 <div
                   className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                     activeItem === 'tennis'
-                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                   }`}
                   onClick={() => setIsTennisOpen(!isTennisOpen)}
                 >
                   <div
                     className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'tennis' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                      activeItem === 'tennis' ? 'bg-purple-200' : 'bg-gray-200'
                     }`}
                   >
                     <TennisIcon />
@@ -805,14 +812,14 @@ const Sidebar: React.FC = () => {
                 <div
                   className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                     activeItem === 'horse-racing'
-                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                   }`}
                   onClick={() => setIsHorseOpen(!isHorseOpen)}
                 >
                   <div
                     className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'horse-racing' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                      activeItem === 'horse-racing' ? 'bg-purple-200' : 'bg-gray-200'
                     }`}
                   >
                     <HorseRacingIcon />
@@ -840,14 +847,14 @@ const Sidebar: React.FC = () => {
                 <div
                   className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                     activeItem === 'greyhound'
-                      ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                      : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                   }`}
                   onClick={() => setIsGreyhoundOpen(!isGreyhoundOpen)}
                 >
                   <div
                     className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'greyhound' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                      activeItem === 'greyhound' ? 'bg-purple-200' : 'bg-gray-200'
                     }`}
                   >
                     <GreyhoundIcon />
@@ -888,13 +895,13 @@ const Sidebar: React.FC = () => {
                     <a
                       className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                          : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                          ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                       }`}
                     >
                       <div
                         className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                          isActive ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                          isActive ? 'bg-purple-200' : 'bg-gray-200'
                         }`}
                       >
                         {sport.icon}
@@ -921,13 +928,13 @@ const Sidebar: React.FC = () => {
           <a 
             className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
               activeItem === 'casino'
-                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
             }`}
           >
             <div
               className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                activeItem === 'casino' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                activeItem === 'casino' ? 'bg-purple-200' : 'bg-gray-200'
               }`}
             >
               <CasinoIcon />
@@ -936,28 +943,28 @@ const Sidebar: React.FC = () => {
           </a>
         </Link>
 
-        {/* BetSlip */}
+        {/* Wallet */}
         <Link
-          href="/betslip"
+          href="/wallet"
           prefetch={true}
           passHref
           legacyBehavior
         >
           <a 
             className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-              activeItem === 'betslip'
-                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+              activeItem === 'wallet'
+                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
             }`}
           >
             <div
               className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                activeItem === 'betslip' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                activeItem === 'wallet' ? 'bg-purple-200' : 'bg-gray-200'
               }`}
             >
-              <BetslipIcon />
+              <WalletIcon />
             </div>
-            <span className="font-medium">BetSlip</span>
+            <span className="font-medium">My Wallet</span>
           </a>
         </Link>
 
@@ -971,13 +978,13 @@ const Sidebar: React.FC = () => {
           <a 
             className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
               activeItem === 'news'
-                ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                : 'text-gray-400 hover:bg-[#121212] hover:text-white'
+                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
             }`}
           >
             <div
               className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                activeItem === 'news' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                activeItem === 'news' ? 'bg-purple-200' : 'bg-gray-200'
               }`}
             >
               <NewsIcon />
@@ -997,13 +1004,13 @@ const Sidebar: React.FC = () => {
             <a 
               className={`flex items-center px-3 py-2 rounded-lg transition-colors mt-6 border-t border-[#2a2a2a] pt-6 ${
                 activeItem === 'admin'
-                  ? 'bg-purple-900/50 border-l-4 border-purple-600 text-white'
-                  : 'text-purple-400 hover:bg-[#121212] hover:text-purple-300'
+                  ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
+                  : 'text-purple-400 hover:bg-gray-100 hover:text-purple-300'
               }`}
             >
               <div
                 className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                  activeItem === 'admin' ? 'bg-purple-600/20' : 'bg-[#0f0f0f]'
+                  activeItem === 'admin' ? 'bg-purple-200' : 'bg-gray-200'
                 }`}
               >
                 <AdminIcon />

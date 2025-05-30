@@ -16,15 +16,15 @@ interface KpiCardProps {
 
 const KpiCard: React.FC<KpiCardProps> = ({ title, value, change, icon, trend }) => {
   return (
-    <div className="bg-[#1a1f2c] rounded-lg p-6 shadow-md">
+    <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="text-gray-400 text-sm font-medium mb-1">{title}</h3>
-          <div className="text-white text-2xl font-bold">{value}</div>
+          <h3 className="text-gray-500 text-sm font-medium mb-1">{title}</h3>
+          <div className="text-gray-800 text-2xl font-bold">{value}</div>
           {change && (
             <div className={`text-xs mt-2 flex items-center ${
-              trend === 'up' ? 'text-green-400' : 
-              trend === 'down' ? 'text-red-400' : 'text-gray-400'
+              trend === 'up' ? 'text-green-600' : 
+              trend === 'down' ? 'text-red-600' : 'text-gray-500'
             }`}>
               {trend === 'up' && (
                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -40,7 +40,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, change, icon, trend }) 
             </div>
           )}
         </div>
-        <div className="p-3 rounded-full bg-[#242a38]">
+        <div className="p-3 rounded-full bg-gray-100">
           {icon}
         </div>
       </div>
@@ -53,8 +53,8 @@ const BetActivityChart = ({ data }: { data: {date: string, count: number}[] }) =
   const maxValue = Math.max(...data.map(d => d.count));
   
   return (
-    <div className="bg-[#1a1f2c] rounded-lg p-6 shadow-md">
-      <h3 className="text-lg font-medium mb-4">Bet Activity (Last 7 Days)</h3>
+    <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+      <h3 className="text-lg font-medium mb-4 text-gray-800">Bet Activity (Last 7 Days)</h3>
       <div className="h-60 flex items-end justify-between">
         {data.map((day, index) => (
           <div key={index} className="flex flex-col items-center flex-1">
@@ -66,10 +66,10 @@ const BetActivityChart = ({ data }: { data: {date: string, count: number}[] }) =
                 opacity: day.count ? 1 : 0.3
               }}
             ></div>
-            <div className="text-xs text-gray-400 mt-2">
+            <div className="text-xs text-gray-500 mt-2">
               {day.date}
             </div>
-            <div className="text-xs font-medium mt-1">
+            <div className="text-xs font-medium mt-1 text-gray-800">
               {day.count}
             </div>
           </div>

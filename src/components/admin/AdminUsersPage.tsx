@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAdmin } from '@/contexts/AdminContext';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
 interface User {
@@ -120,37 +120,54 @@ const EditUserModal: React.FC<EditModalProps> = ({ isOpen, onClose, user, onSave
 };
 
 const AdminUsersPage: React.FC = () => {
-  const { fetchUsers, users } = useAdmin();
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const { fetchUsers, users, loadingData } = useAdmin();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [loadAll, setLoadAll] = useState(false);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
 
   useEffect(() => {
     const loadUsers = async () => {
-      setIsLoading(true);
       await fetchUsers();
-      setIsLoading(false);
     };
     
     loadUsers();
   }, [fetchUsers]);
 
+  // Reset to first page when search term changes
   useEffect(() => {
-    if (users) {
-      const filtered = users.filter(user => 
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-    }
-  }, [users, searchTerm]);
+    setCurrentPage(1);
+  }, [searchTerm]);
 
-  const handleEditUser = (user: User) => {
+  // Memoize filtered users to avoid recalculating on every render
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    
+    // If we're not loading all users and there's no search term, only show the first 50
+    if (!loadAll && searchTerm === '') {
+      return users.slice(0, 50);
+    }
+    
+    return users.filter(user => 
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [users, searchTerm, loadAll]);
+
+  // Calculate current users for pagination
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  const handleEditUser = useCallback((user: User) => {
     setSelectedUser(user);
     setIsModalOpen(true);
-  };
+  }, []);
 
   const handleSaveUserChanges = async (userId: string, coinBalance: number, realBalance: number) => {
     if (!db) return;
@@ -182,29 +199,105 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const goToPage = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+  // Pagination controls
+  const PaginationControls = () => (
+    <div className="flex items-center justify-between px-6 py-4 border-t border-[#363e52]">
+      <div>
+        <p className="text-sm text-gray-400">
+          Showing <span className="font-medium text-white">{indexOfFirstUser + 1}</span> to{' '}
+          <span className="font-medium text-white">
+            {Math.min(indexOfLastUser, filteredUsers.length)}
+          </span>{' '}
+          of <span className="font-medium text-white">{filteredUsers.length}</span> users
+        </p>
+      </div>
+      <div className="flex space-x-1">
+        <button
+          onClick={() => goToPage(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-3 py-1 bg-[#242a38] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Previous
+        </button>
+        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+          // Show pages around current page
+          let pageToShow;
+          if (totalPages <= 5) {
+            pageToShow = i + 1;
+          } else if (currentPage <= 3) {
+            pageToShow = i + 1;
+          } else if (currentPage >= totalPages - 2) {
+            pageToShow = totalPages - 4 + i;
+          } else {
+            pageToShow = currentPage - 2 + i;
+          }
+          
+          return (
+            <button
+              key={pageToShow}
+              onClick={() => goToPage(pageToShow)}
+              className={`px-3 py-1 rounded ${
+                currentPage === pageToShow
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-[#242a38] text-white hover:bg-[#363e52]'
+              }`}
+            >
+              {pageToShow}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => goToPage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 bg-[#242a38] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-[#1a1f2c] rounded-lg shadow-md overflow-hidden">
-      {/* Header with search */}
+      {/* Header with search and load all toggle */}
       <div className="p-4 border-b border-[#363e52] flex flex-col md:flex-row justify-between md:items-center space-y-2 md:space-y-0">
         <h2 className="text-xl font-semibold">User Management</h2>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-2 pr-10 bg-[#242a38] border border-[#363e52] rounded-md text-white w-full md:w-64 focus:outline-none focus:ring-1 focus:ring-purple-500"
-          />
-          <div className="absolute right-3 top-2.5 text-gray-400">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
+        <div className="flex flex-col md:flex-row gap-3">
+          {!loadAll && !searchTerm && (
+            <div className="text-xs text-gray-400 md:self-center">
+              Showing first 50 users - {' '}
+              <button 
+                onClick={() => setLoadAll(true)}
+                className="text-purple-400 hover:text-purple-300"
+              >
+                Load all users
+              </button>
+            </div>
+          )}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-4 py-2 pr-10 bg-[#242a38] border border-[#363e52] rounded-md text-white w-full md:w-64 focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
+            <div className="absolute right-3 top-2.5 text-gray-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Table */}
-      {isLoading ? (
+      {loadingData ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500"></div>
         </div>
@@ -213,62 +306,75 @@ const AdminUsersPage: React.FC = () => {
           {searchTerm ? 'No users found matching your search' : 'No users found'}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="text-xs text-gray-400 uppercase bg-[#242a38]">
-              <tr>
-                <th className="px-6 py-3 text-left">Email</th>
-                <th className="px-6 py-3 text-left">Display Name</th>
-                <th className="px-6 py-3 text-left">Role</th>
-                <th className="px-6 py-3 text-left">Coin Balance</th>
-                <th className="px-6 py-3 text-left">Real Balance</th>
-                <th className="px-6 py-3 text-left">Signup Date</th>
-                <th className="px-6 py-3 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#363e52]">
-              {filteredUsers.map((user) => (
-                <tr 
-                  key={user.id} 
-                  className="hover:bg-[#242a38] transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    {user.email || 'No email'}
-                  </td>
-                  <td className="px-6 py-4">
-                    {user.displayName || 'Anonymous'}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      user.role === 'admin' 
-                        ? 'bg-purple-900 bg-opacity-30 text-purple-400' 
-                        : 'bg-blue-900 bg-opacity-30 text-blue-400'
-                    }`}>
-                      {user.role || 'user'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {user.coinBalance?.toLocaleString() || 0}
-                  </td>
-                  <td className="px-6 py-4">
-                    ${user.realBalance?.toLocaleString() || 0}
-                  </td>
-                  <td className="px-6 py-4">
-                    {formatDate(user.createdAt)}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => handleEditUser(user)}
-                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
-                    >
-                      Edit
-                    </button>
-                  </td>
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="text-xs text-gray-400 uppercase bg-[#242a38]">
+                <tr>
+                  <th className="px-6 py-3 text-left">Email</th>
+                  <th className="px-6 py-3 text-left">Display Name</th>
+                  <th className="px-6 py-3 text-left">Role</th>
+                  <th className="px-6 py-3 text-left">Coin Balance</th>
+                  <th className="px-6 py-3 text-left">Real Balance</th>
+                  <th className="px-6 py-3 text-left">Signup Date</th>
+                  <th className="px-6 py-3 text-center">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-[#363e52]">
+                {currentUsers.map((user) => (
+                  <tr 
+                    key={user.id} 
+                    className="hover:bg-[#242a38] transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      {user.email || 'No email'}
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.displayName || 'Anonymous'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        user.role === 'admin' 
+                          ? 'bg-purple-900 bg-opacity-30 text-purple-400' 
+                          : 'bg-blue-900 bg-opacity-30 text-blue-400'
+                      }`}>
+                        {user.role || 'user'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {typeof user.coinBalance === 'number' 
+                        ? user.coinBalance.toLocaleString()
+                        : '0'
+                      }
+                    </td>
+                    <td className="px-6 py-4">
+                      ${typeof user.realBalance === 'number' 
+                        ? user.realBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})
+                        : '0.00'
+                      }
+                    </td>
+                    <td className="px-6 py-4">
+                      {formatDate(user.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        className="text-purple-400 hover:text-purple-300 focus:outline-none"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Pagination controls */}
+          {totalPages > 1 && <PaginationControls />}
+        </>
       )}
 
       {/* Edit User Modal */}
@@ -282,4 +388,4 @@ const AdminUsersPage: React.FC = () => {
   );
 };
 
-export default AdminUsersPage; 
+export default React.memo(AdminUsersPage); 
