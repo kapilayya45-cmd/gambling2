@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { BettingMarket } from './MarketTabs';
-import { CricketFixture, CRICKET_TEAM_NAMES } from '@/services/cricketApi';
+import { CRICKET_TEAM_NAMES } from '@/services/cricketApi';
+import type { CompatibleMatch } from '@/types/oddsApiTypes';
 import InlineBetEntry from './InlineBetEntry';
+import MatchWinnerUI from './MatchWinnerUI';
 
 // Odds button types
 const BACK = 'back';
@@ -34,7 +36,7 @@ interface SelectedOddsType {
 // Main CricketOddsGrid props
 interface CricketOddsGridProps {
   market: BettingMarket;
-  match: CricketFixture;
+  match: CompatibleMatch;
   playerFilters: string[];
   onPlaceBet: (selection: any) => void;
 }
@@ -54,19 +56,19 @@ const generatePriceLevels = (basePrice: number, isBack: boolean): PriceLevels[] 
 const TOTAL_COLUMNS = 8; // 1 for selection name, 3 for back, 3 for lay, 1 for min/max
 
 // Helper function to get team names from the match
-const getTeamName = (teamId: number, match: CricketFixture): string => {
+const getTeamName = (teamId: number | string, match: CompatibleMatch): string => {
   // First check if we have a mapped name
   if (CRICKET_TEAM_NAMES[teamId]) {
     return CRICKET_TEAM_NAMES[teamId];
   }
   
-  // Next, check if we have team objects from the API
-  if (teamId === match.localteam_id && match.localteam?.name) {
-    return match.localteam.name;
+  // For CompatibleMatch format
+  if (teamId === match.localteam_id) {
+    return match.localteam_name;
   }
   
-  if (teamId === match.visitorteam_id && match.visitorteam?.name) {
-    return match.visitorteam.name;
+  if (teamId === match.visitorteam_id) {
+    return match.visitorteam_name;
   }
   
   // Finally fall back to a generic name
@@ -88,36 +90,148 @@ const CricketOddsGrid: React.FC<CricketOddsGridProps> = ({ market, match, player
     // Log team names for debugging
     console.log(`Displaying match: ${teamA} vs ${teamB}`);
     
-    // Base prices with some variance
-    const teamABasePrice = 1.85 + (Math.random() * 0.3);
-    const teamBBasePrice = 2.10 + (Math.random() * 0.3);
-    const drawBasePrice = 4.50 + (Math.random() * 0.5);
-    
     if (market === 'match-winner') {
-      return [
-        {
-          id: `${match.id}_team_a`,
-          name: teamA,
-          back: generatePriceLevels(teamABasePrice, true),
-          lay: generatePriceLevels(teamABasePrice + 0.05, false)
-        },
-        {
-          id: `${match.id}_draw`,
-          name: 'Draw',
-          back: generatePriceLevels(drawBasePrice, true),
-          lay: generatePriceLevels(drawBasePrice + 0.05, false)
-        },
-        {
-          id: `${match.id}_team_b`,
-          name: teamB,
-          back: generatePriceLevels(teamBBasePrice, true),
-          lay: generatePriceLevels(teamBBasePrice + 0.05, false)
-        }
-      ];
+      // First check if real betting odds exist in the match data from API
+      if (match.betting_odds?.match_winner && Object.keys(match.betting_odds.match_winner).length > 0) {
+        console.log('Using real betting odds from API');
+        
+        // Get real odds from the API
+        const realOdds = match.betting_odds.match_winner;
+        console.log('Real odds data:', realOdds);
+        
+        // Generate selections with real odds
+        return [
+          {
+            id: `${match.id}_team_a`,
+            name: teamA,
+            back: [
+              {
+                price: realOdds[teamA] || 1.85,
+                size: 10000 + Math.floor(Math.random() * 5000)
+              }, 
+              {
+                price: (realOdds[teamA] || 1.85) - 0.05,
+                size: 8000 + Math.floor(Math.random() * 4000)
+              },
+              {
+                price: (realOdds[teamA] || 1.85) - 0.1,
+                size: 5000 + Math.floor(Math.random() * 3000)
+              }
+            ],
+            lay: [
+              {
+                price: (realOdds[teamA] || 1.85) + 0.05,
+                size: 8000 + Math.floor(Math.random() * 4000)
+              },
+              {
+                price: (realOdds[teamA] || 1.85) + 0.1,
+                size: 5000 + Math.floor(Math.random() * 3000)
+              },
+              {
+                price: (realOdds[teamA] || 1.85) + 0.15,
+                size: 3000 + Math.floor(Math.random() * 2000)
+              }
+            ]
+          },
+          {
+            id: `${match.id}_draw`,
+            name: 'Draw',
+            back: [
+              {
+                price: realOdds['Draw'] || 4.5,
+                size: 5000 + Math.floor(Math.random() * 2000)
+              },
+              {
+                price: (realOdds['Draw'] || 4.5) - 0.1,
+                size: 4000 + Math.floor(Math.random() * 1500)
+              },
+              {
+                price: (realOdds['Draw'] || 4.5) - 0.2,
+                size: 3000 + Math.floor(Math.random() * 1000)
+              }
+            ],
+            lay: [
+              {
+                price: (realOdds['Draw'] || 4.5) + 0.1,
+                size: 4000 + Math.floor(Math.random() * 1500)
+              },
+              {
+                price: (realOdds['Draw'] || 4.5) + 0.2,
+                size: 3000 + Math.floor(Math.random() * 1000)
+              },
+              {
+                price: (realOdds['Draw'] || 4.5) + 0.3,
+                size: 2000 + Math.floor(Math.random() * 800)
+              }
+            ]
+          },
+          {
+            id: `${match.id}_team_b`,
+            name: teamB,
+            back: [
+              {
+                price: realOdds[teamB] || 2.1,
+                size: 10000 + Math.floor(Math.random() * 5000)
+              },
+              {
+                price: (realOdds[teamB] || 2.1) - 0.05,
+                size: 8000 + Math.floor(Math.random() * 4000)
+              },
+              {
+                price: (realOdds[teamB] || 2.1) - 0.1,
+                size: 5000 + Math.floor(Math.random() * 3000)
+              }
+            ],
+            lay: [
+              {
+                price: (realOdds[teamB] || 2.1) + 0.05,
+                size: 8000 + Math.floor(Math.random() * 4000)
+              },
+              {
+                price: (realOdds[teamB] || 2.1) + 0.1,
+                size: 5000 + Math.floor(Math.random() * 3000)
+              },
+              {
+                price: (realOdds[teamB] || 2.1) + 0.15,
+                size: 3000 + Math.floor(Math.random() * 2000)
+              }
+            ]
+          }
+        ];
+      } else {
+        console.log('No real odds available, using mock data');
+        
+        // Use mock data as fallback
+        // Base prices with some variance
+        const teamABasePrice = 1.85 + (Math.random() * 0.3);
+        const teamBBasePrice = 2.10 + (Math.random() * 0.3);
+        const drawBasePrice = 4.50 + (Math.random() * 0.5);
+        
+        return [
+          {
+            id: `${match.id}_team_a`,
+            name: teamA,
+            back: generatePriceLevels(teamABasePrice, true),
+            lay: generatePriceLevels(teamABasePrice + 0.05, false)
+          },
+          {
+            id: `${match.id}_draw`,
+            name: 'Draw',
+            back: generatePriceLevels(drawBasePrice, true),
+            lay: generatePriceLevels(drawBasePrice + 0.05, false)
+          },
+          {
+            id: `${match.id}_team_b`,
+            name: teamB,
+            back: generatePriceLevels(teamBBasePrice, true),
+            lay: generatePriceLevels(teamBBasePrice + 0.05, false)
+          }
+        ];
+      }
     }
     
     if (market === 'top-batsman') {
-      // Mock data for top batsmen
+      // Mock data for top batsmen with current IPL players
       return [
         {
           id: `${match.id}_batsman_1`,
@@ -133,13 +247,13 @@ const CricketOddsGrid: React.FC<CricketOddsGridProps> = ({ market, match, player
         },
         {
           id: `${match.id}_batsman_3`,
-          name: 'KL Rahul',
+          name: 'Shubman Gill',
           back: generatePriceLevels(5.00, true),
           lay: generatePriceLevels(5.10, false)
         },
         {
           id: `${match.id}_batsman_4`,
-          name: 'MS Dhoni',
+          name: 'Jos Buttler',
           back: generatePriceLevels(7.50, true),
           lay: generatePriceLevels(7.65, false)
         },
@@ -221,6 +335,92 @@ const CricketOddsGrid: React.FC<CricketOddsGridProps> = ({ market, match, player
     return openBetRow === selectionId;
   };
 
+  // For Match Winner market, use the new MatchWinnerUI component
+  if (market === 'match-winner') {
+    // Get team names
+    const teamA = getTeamName(match.localteam_id, match);
+    const teamB = getTeamName(match.visitorteam_id, match);
+    
+    // Find the best back price for each team
+    const teamASelection = selections.find(sel => sel.name === teamA);
+    const teamBSelection = selections.find(sel => sel.name === teamB);
+    
+    // Extract best back price and volume for each team
+    const odds: Record<string, number> = {};
+    const volumes: Record<string, number> = {};
+    
+    // Check if real betting odds are available directly from the API
+    if (match.betting_odds?.match_winner && Object.keys(match.betting_odds.match_winner).length > 0) {
+      console.log('Passing real API odds to MatchWinnerUI');
+      
+      // Get real odds directly from the API response
+      const apiOdds = match.betting_odds.match_winner;
+      
+      // Check if we have odds for our team names
+      if (apiOdds[teamA]) {
+        odds[teamA] = apiOdds[teamA];
+        volumes[teamA] = 15000 + Math.floor(Math.random() * 10000); // Mock volume
+      }
+      
+      if (apiOdds[teamB]) {
+        odds[teamB] = apiOdds[teamB];
+        volumes[teamB] = 15000 + Math.floor(Math.random() * 10000); // Mock volume
+      }
+      
+      // Add Draw odds if available
+      if (apiOdds['Draw']) {
+        odds['Draw'] = apiOdds['Draw'];
+        volumes['Draw'] = 5000 + Math.floor(Math.random() * 5000); // Mock volume
+      }
+    } else {
+      // Use the generated selections if no direct API odds
+      if (teamASelection && teamASelection.back[0]) {
+        odds[teamA] = teamASelection.back[0].price;
+        volumes[teamA] = teamASelection.back[0].size;
+      }
+      
+      if (teamBSelection && teamBSelection.back[0]) {
+        odds[teamB] = teamBSelection.back[0].price;
+        volumes[teamB] = teamBSelection.back[0].size;
+      }
+    }
+    
+    // Handler for when odds are selected in the MatchWinnerUI
+    const handleMatchWinnerOddsSelect = (team: string, price: number) => {
+      // Find the selection matching the team name
+      const selection = selections.find(sel => sel.name === team);
+      if (selection) {
+        handlePriceClick(selection, price, BACK);
+      }
+    };
+    
+    return (
+      <div>
+        <MatchWinnerUI 
+          odds={odds} 
+          volumes={volumes} 
+          onSelectOdds={handleMatchWinnerOddsSelect}
+          match={match}
+        />
+        
+        {/* Inline bet entry row shown when an odds card is clicked */}
+        {openBetRow && selectedOdds && (
+          <div className="mt-4">
+            <InlineBetEntry
+              selection={selectedOdds.selection}
+              market={selectedOdds.market}
+              odds={selectedOdds.price}
+              side={selectedOdds.side}
+              onCancel={handleCancelBet}
+              onPlaceBet={handlePlaceBet}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // For all other markets, use the original table format
   return (
     <div className="w-full overflow-x-auto">
       <table className="w-full border-collapse">

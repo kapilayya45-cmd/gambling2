@@ -1,0 +1,3 @@
+To use real IPL data instead of demo data, you need to set the NEXT_PUBLIC_RAPID_API_KEY in your .env.local file. Get an API key from RapidAPI for the Odds API service and add it as follows:
+
+NEXT_PUBLIC_RAPID_API_KEY=your_rapid_api_key_here

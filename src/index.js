@@ -7,13 +7,23 @@ const path = require('path');
 try {
   // Try to load service account from local file
   const serviceAccountPath = path.resolve(__dirname, '../firebase-service-account.json');
-  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
   
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+  // Check if file exists before trying to read it
+  if (fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log('Initialized Firebase Admin with service account');
+  } else {
+    // File doesn't exist, use default credentials
+    console.log('Service account file not found, using default credentials');
+    admin.initializeApp();
+  }
 } catch (error) {
   // If file not found or invalid, use default credentials (for Firebase deployment)
+  console.log('Error initializing Firebase Admin:', error.message);
   console.log('Using default admin credentials');
   admin.initializeApp();
 }

@@ -173,6 +173,12 @@ export default function IPLBetsPage() {
 
   // Handle placing a bet
   const handlePlaceBet = (selection: BetSelection) => {
+    // Validate if user has enough balance
+    if (selection.stake > walletBalance) {
+      alert(`Insufficient balance. Available: ₹${walletBalance.toLocaleString()}`);
+      return;
+    }
+    
     const placedBet: PlacedBet = {
       ...selection,
       selectionId: `${selection.matchId}_${selection.selection}_${Date.now()}`,
@@ -266,15 +272,6 @@ export default function IPLBetsPage() {
         <main className="container mx-auto p-4 flex flex-col md:flex-row">
           {/* Sidebar with matches */}
           <div className="w-full md:w-64 mb-6 md:mb-0 md:mr-6">
-            <div className="mb-4">
-              <Link href="/cricket/ipl" className="text-purple-600 hover:text-purple-800 flex items-center">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to all IPL
-              </Link>
-            </div>
-            
             <h2 className="text-xl font-bold mb-4">
               {teamNameForDisplay ? `${teamNameForDisplay} Matches` : 'IPL Matches'}
             </h2>

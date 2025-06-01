@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { CompatibleMatch } from '@/types/oddsApiTypes';
-import { formatTeamName, createShortTitle } from '@/utils/teamUtils';
 
 // Demo matches for fallback
 const DEMO_MATCHES: CompatibleMatch[] = [
@@ -60,174 +59,116 @@ const DEMO_MATCHES: CompatibleMatch[] = [
   }
 ];
 
+// Fetcher function for SWR
+const fetcher = async (url: string): Promise<CompatibleMatch[]> => {
+  console.log(`SWR fetching data from: ${url}`);
+  
+  try {
+    const response = await fetch(url, {
+      cache: 'no-cache',
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    console.log(`SWR received data:`, data);
+    
+    // Check if the response contains an error message
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    // Check if we actually got matches data
+    let matchesData = data;
+    if (!Array.isArray(data)) {
+      if (data.data && Array.isArray(data.data)) {
+        matchesData = data.data;
+      } else {
+        console.error('Invalid data format, not an array:', data);
+        throw new Error('Invalid response format');
+      }
+    }
+    
+    if (matchesData.length === 0) {
+      console.warn('API returned zero matches - using demo matches');
+      return DEMO_MATCHES;
+    }
+    
+    // Sort matches: live first, then by start time
+    const sortedMatches = [...matchesData].sort((a, b) => {
+      // Live matches first
+      if (a.is_live && !b.is_live) return -1;
+      if (!a.is_live && b.is_live) return 1;
+      
+      // Then by date/time
+      const dateA = new Date(`${a.date}T${a.time}`);
+      const dateB = new Date(`${b.date}T${b.time}`);
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    console.log('SWR sorted matches:', sortedMatches.map(m => 
+      `${m.localteam_name} vs ${m.visitorteam_name} (${m.is_live ? 'LIVE' : m.date})`));
+    
+    return sortedMatches;
+  } catch (err: any) {
+    console.error('SWR error fetching IPL odds:', err);
+    return DEMO_MATCHES; // Return demo matches as fallback
+  }
+};
+
 /**
- * Custom hook to fetch IPL matches and odds from our serverless API
+ * Custom hook to fetch IPL matches and odds using SWR
  * @param refreshInterval - How often to refresh data in ms (default: 60 seconds)
  * @param debug - Whether to show debug console logs
  * @returns IPL matches with betting odds
  */
 export function useIPLOdds(refreshInterval = 60000, debug = true) {
-  const [matches, setMatches] = useState<CompatibleMatch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  // Ensure team names are properly formatted
-  const formatMatches = (matchData: CompatibleMatch[]): CompatibleMatch[] => {
-    return matchData.map(match => {
-      // Format team names
-      const homeTeam = formatTeamName(match.localteam_name);
-      const awayTeam = formatTeamName(match.visitorteam_name);
-      
-      // Return updated match object
-      return {
-        ...match,
-        localteam_name: homeTeam,
-        visitorteam_name: awayTeam,
-        title: `${homeTeam} vs ${awayTeam}`,
-        short_title: createShortTitle(homeTeam, awayTeam)
-      };
-    });
-  };
-
-  const fetchOdds = async () => {
-    try {
-      setLoading(true);
-      
-      console.log('Fetching IPL odds data...');
-      
-      // Try the direct API endpoint first
-      let isDirectApiSuccess = false;
-      try {
-        const directResponse = await fetch('/api/direct-odds', {
-          cache: 'no-cache',
-          headers: { 'Cache-Control': 'no-cache' }
-        });
+  const { 
+    data: matches = DEMO_MATCHES, 
+    error, 
+    isLoading,
+    isValidating,
+    mutate 
+  } = useSWR<CompatibleMatch[]>(
+    '/api/ipl-odds', 
+    fetcher, 
+    {
+      refreshInterval, // Auto revalidate every X ms
+      revalidateOnFocus: true, // Revalidate when user refocuses the window
+      revalidateOnReconnect: true, // Revalidate when user reconnects to the network
+      shouldRetryOnError: true, // Retry on error
+      errorRetryCount: 3, // Maximum retry count
+      dedupingInterval: 2000, // Deduplicate requests within this interval
+      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+        // Don't retry on 404
+        if (error.status === 404) return;
         
-        if (directResponse.ok) {
-          const directData = await directResponse.json();
-          
-          console.log(`Received data from direct API:`, directData);
-          
-          if (Array.isArray(directData) && directData.length > 0) {
-            const formattedMatches = formatMatches(directData);
-            
-            // Sort matches: live first, then by start time
-            const sortedMatches = [...formattedMatches].sort((a, b) => {
-              // Live matches first
-              if (a.is_live && !b.is_live) return -1;
-              if (!a.is_live && b.is_live) return 1;
-              
-              // Then by date/time
-              const dateA = new Date(`${a.date}T${a.time}`);
-              const dateB = new Date(`${b.date}T${b.time}`);
-              return dateA.getTime() - dateB.getTime();
-            });
-            
-            setMatches(sortedMatches);
-            setLastUpdated(new Date());
-            setError(null);
-            isDirectApiSuccess = true;
-            return;
-          }
-        }
-      } catch (directError) {
-        console.error('Error using direct API:', directError);
-        // Continue to fallback API
-      }
-      
-      if (!isDirectApiSuccess) {
-        console.log('Direct API failed, falling back to regular API...');
-        // Call our serverless endpoint that keeps the API key secure
-        const response = await fetch('/api/ipl-odds', {
-          cache: 'no-cache', // Ensure we don't get a cached response
-          headers: {
-            'Cache-Control': 'no-cache'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Server responded with status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        console.log(`Received data from regular API:`, data);
-        
-        // Check if the response contains an error message
-        if (data.error) {
-          throw new Error(data.error);
-        }
-        
-        // Check if we actually got matches data
-        if (!Array.isArray(data)) {
-          console.error('Invalid data format, not an array:', data);
-          throw new Error('Invalid response format');
-        }
-        
-        console.log(`Received ${data.length} matches`);
-        
-        if (data.length === 0) {
-          console.warn('API returned zero matches - using demo matches');
-          setMatches(DEMO_MATCHES);
-          setLastUpdated(new Date());
-          setError('No matches returned from API - showing demo data');
+        // Don't retry on 429 (rate limit)
+        if (error.status === 429) {
+          console.log('Rate limit hit, using cached data');
           return;
         }
         
-        // Format and sort matches
-        const formattedMatches = formatMatches(data);
-        
-        // Sort matches: live first, then by start time
-        const sortedMatches = [...formattedMatches].sort((a, b) => {
-          // Live matches first
-          if (a.is_live && !b.is_live) return -1;
-          if (!a.is_live && b.is_live) return 1;
-          
-          // Then by date/time
-          const dateA = new Date(`${a.date}T${a.time}`);
-          const dateB = new Date(`${b.date}T${b.time}`);
-          return dateA.getTime() - dateB.getTime();
-        });
-        
-        console.log('Sorted matches:', sortedMatches.map(m => 
-          `${m.localteam_name} vs ${m.visitorteam_name} (${m.is_live ? 'LIVE' : m.date})`));
-        
-        setMatches(sortedMatches);
-        setLastUpdated(new Date());
-        setError(null);
-      }
-      
-    } catch (err: any) {
-      console.error('Error fetching IPL odds:', err);
-      setError(err.message || 'Failed to load IPL matches and odds');
-      
-      // If we have no matches but had an error, use demo matches
-      if (matches.length === 0) {
-        console.log('Using demo matches due to error');
-        setMatches(DEMO_MATCHES);
-      }
-    } finally {
-      setLoading(false);
+        // Retry after 5 seconds
+        setTimeout(() => revalidate({ retryCount }), 5000);
+      },
+      fallbackData: DEMO_MATCHES, // Initial data while loading
     }
-  };
-
-  useEffect(() => {
-    // Fetch immediately on mount
-    fetchOdds();
-    
-    // Set up polling interval
-    const intervalId = setInterval(fetchOdds, refreshInterval);
-    
-    // Clean up on unmount
-    return () => clearInterval(intervalId);
-  }, [refreshInterval]);
-
+  );
+  
+  const lastUpdated = isValidating ? null : new Date();
+  
   return {
-    matches: matches.length > 0 ? matches : DEMO_MATCHES, // Always return at least demo matches
-    loading,
-    error,
+    matches, // Always return at least demo matches
+    loading: isLoading,
+    error: error ? (error.message || 'Failed to load IPL matches and odds') : null,
     lastUpdated,
-    refetch: fetchOdds
+    refetch: mutate // Function to manually refetch data
   };
 } 

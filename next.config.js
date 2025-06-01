@@ -18,6 +18,17 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   
+  // Redirect configuration
+  async redirects() {
+    return [
+      {
+        source: '/dashboard',
+        destination: '/home',
+        permanent: true,
+      },
+    ];
+  },
+  
   // Configure webpack to handle SVG files
   webpack(config) {
     // Improved SVG handling
@@ -50,4 +61,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig; 
+module.exports = nextConfig;
