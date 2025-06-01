@@ -1,0 +1,1 @@
+You need to replace the temp_api_key_for_testing_ipl_data in .env.local with a valid Rapid API key from RapidAPI.com for the Odds API.

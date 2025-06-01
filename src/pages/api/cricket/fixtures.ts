@@ -40,14 +40,24 @@ export default async function handler(
       },
     });
     
-    // Extract the data
-    const upcomingMatches = response.data.data || response.data || [];
+    // Extract the data - handle new API format
+    let upcomingMatches = [];
     
-    // Filter for IPL matches
-    let matches = upcomingMatches.filter((match: any) => 
-      match.league_key === 'ipl' || 
-      (match.league && match.league.toLowerCase().includes('indian premier league'))
-    );
+    if (response.data && response.data.events) {
+      // New API format (odds-api1)
+      const eventsObj = response.data.events;
+      upcomingMatches = Object.values(eventsObj);
+      console.log(`Found ${upcomingMatches.length} events in new API format`);
+    } else {
+      console.warn("Unexpected API response format");
+      upcomingMatches = [];
+    }
+    
+    // Filter for IPL matches - handle new API format
+    let matches = upcomingMatches.filter((match: any) => {
+      // We're using tournament ID 2472 which is already filtered
+      return true;
+    });
     
     // Filter by date range if needed
     if (startDate || endDate) {
@@ -55,7 +65,11 @@ export default async function handler(
       const endTimestamp = endDate ? new Date(endDate as string).getTime() : Infinity;
       
       matches = matches.filter((match: any) => {
-        const matchDate = new Date(match.commence_time).getTime();
+        // Handle new API format
+        const matchTimeStr = match.startTime ? new Date(match.startTime * 1000).toISOString() : null;
+        if (!matchTimeStr) return true; // Include if we can't determine time
+        
+        const matchDate = new Date(matchTimeStr).getTime();
         return matchDate >= startTimestamp && matchDate <= endTimestamp;
       });
     }
@@ -63,12 +77,17 @@ export default async function handler(
     // Format matches into expected format for the frontend
     const formattedData = {
       data: matches.map((match: any) => {
+        // Handle new API format
+        const homeTeam = match.participant1 || "";
+        const awayTeam = match.participant2 || "";
+        const matchTime = match.startTime ? new Date(match.startTime * 1000).toISOString() : new Date().toISOString();
+        
         return {
-          id: match.id,
+          id: match.eventId || `match_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
           league_id: 'ipl',
-          localteam_id: match.home_team?.toLowerCase().replace(/\s+/g, '_'),
-          visitorteam_id: match.away_team?.toLowerCase().replace(/\s+/g, '_'),
-          starting_at: match.commence_time,
+          localteam_id: homeTeam.toLowerCase().replace(/\s+/g, '_'),
+          visitorteam_id: awayTeam.toLowerCase().replace(/\s+/g, '_'),
+          starting_at: matchTime,
           status: 'not_started',
           venue_name: match.venue || 'TBD',
           venue_city: '',
@@ -78,15 +97,15 @@ export default async function handler(
             code: 'IPL'
           },
           localteam: {
-            id: match.home_team?.toLowerCase().replace(/\s+/g, '_'),
-            name: match.home_team,
-            code: match.home_team?.split(' ')[0]?.toUpperCase(),
+            id: homeTeam.toLowerCase().replace(/\s+/g, '_'),
+            name: homeTeam,
+            code: homeTeam.split(' ')[0]?.toUpperCase(),
             image_path: ''
           },
           visitorteam: {
-            id: match.away_team?.toLowerCase().replace(/\s+/g, '_'),
-            name: match.away_team,
-            code: match.away_team?.split(' ')[0]?.toUpperCase(),
+            id: awayTeam.toLowerCase().replace(/\s+/g, '_'),
+            name: awayTeam,
+            code: awayTeam.split(' ')[0]?.toUpperCase(),
             image_path: ''
           },
           localteam_score: '',

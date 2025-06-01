@@ -3,27 +3,11 @@ import { useLeagueStatus } from '@/hooks/useLeagueStatus';
 import { useBasketballStatus } from '@/hooks/useBasketballStatus';
 import { CRICKET_LEAGUES, FOOTBALL_LEAGUES } from '@/constants/leagues';
 import { BASKETBALL_LEAGUES } from '@/constants/basketballLeagues';
-import { fetchCricketLivescores, fetchCricketFixturesBySeason, CRICKET_TEAM_NAMES, fetchIPLMatchesWithFallback } from '@/services/cricketApi';
+import { fetchCricketLivescores, fetchCricketFixturesBySeason, CRICKET_TEAM_NAMES } from '@/services/cricketApi';
 import { fetchFootballLivescores, fetchFootballFixturesBySeason } from '@/services/footballApi';
 import { fetchBasketballEvents } from '@/services/basketballApi';
-import { getLiveIPLMatches, getIPLMatches } from '@/services/oddsApiService';
 import { Match } from '@/types/Match';
-import { CompatibleMatch } from '@/types/oddsApiTypes';
 import BettingSlip from './BettingSlip';
-
-// Define FOOTBALL_TEAM_NAMES mapping
-const FOOTBALL_TEAM_NAMES: Record<number, string> = {
-  1: 'Manchester United',
-  2: 'Manchester City',
-  3: 'Liverpool',
-  4: 'Chelsea',
-  5: 'Arsenal',
-  6: 'Tottenham',
-  7: 'Leicester City',
-  8: 'Everton',
-  9: 'West Ham',
-  10: 'Leeds United',
-};
 
 // Tennis leagues from sidebar
 const TENNIS_LEAGUES = [
@@ -49,46 +33,6 @@ const todayFormatted = getFormattedDate(today);
 const tomorrowFormatted = getFormattedDate(tomorrow);
 
 type Tab = 'in-play' | 'today' | 'tomorrow';
-
-// Helper function to convert CompatibleMatch to Match
-const convertToMatch = (m: CompatibleMatch, isLive: boolean, dateLabel: string): Match => {
-  return {
-    id: parseInt(m.id) || Math.floor(Math.random() * 10000),
-    sport: 'cricket' as const,
-    league: 'IPL',
-    teamA: m.localteam_name || CRICKET_TEAM_NAMES[m.localteam_id] || 'Team A',
-    teamB: m.visitorteam_name || CRICKET_TEAM_NAMES[m.visitorteam_id] || 'Team B',
-    time: isLive ? 'Live' : m.time || 'TBD',
-    date: dateLabel,
-    isLive,
-    odds: {
-      teamA: m.betting_odds?.match_winner?.[m.localteam_name] || 1.8 + Math.random() * 0.4,
-      draw: 3.0 + Math.random() * 1.0,
-      teamB: m.betting_odds?.match_winner?.[m.visitorteam_name] || 1.8 + Math.random() * 0.4
-    },
-    stats: isLive ? {
-      teamAScore: m.localteam_score || '0',
-      teamBScore: m.visitorteam_score || '0',
-      period: 'Live',
-      timeElapsed: (m.localteam_overs || m.visitorteam_overs) ? 
-        `${m.localteam_overs || m.visitorteam_overs} overs` : 'In Progress'
-    } : undefined
-  };
-};
-
-// Define the current IPL teams for 2024 at the top with other constants
-const IPL_TEAMS = [
-  'Mumbai Indians',
-  'Chennai Super Kings',
-  'Royal Challengers Bengaluru',
-  'Kolkata Knight Riders',
-  'Delhi Capitals',
-  'Rajasthan Royals',
-  'Sunrisers Hyderabad',
-  'Punjab Kings',
-  'Gujarat Titans',
-  'Lucknow Super Giants'
-];
 
 const InPlayGamesPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('in-play');
@@ -127,123 +71,39 @@ const InPlayGamesPanel: React.FC = () => {
       try {
         // In-Play tab
         if (activeTab === 'in-play') {
-          // 1. Cricket live matches - specifically fetch IPL matches
-          let cricketMatches: Match[] = [];
-          try {
-            console.log('Fetching live IPL cricket matches...');
-            const iplLiveMatches = await getLiveIPLMatches();
-            
-            // Always consider matches with status === 'live' OR is_live === true
-            const filteredLiveMatches = iplLiveMatches.filter(m => 
-              m.status === 'live' || m.is_live === true
-            );
-            
-            console.log(`Found ${filteredLiveMatches.length} matches with live status`);
-            
-            // If no matches are marked as live, force the first match to be live
-            let matchesToShow = filteredLiveMatches;
-            if (filteredLiveMatches.length === 0 && iplLiveMatches.length > 0) {
-              console.log('No live matches found, forcing first match to be live');
-              const firstMatch = { ...iplLiveMatches[0] };
-              firstMatch.status = 'live';
-              firstMatch.status_str = 'Live';
-              firstMatch.is_live = true;
-              
-              // Add some score data if not present
-              if (!firstMatch.localteam_score) {
-                firstMatch.localteam_score = '142/3';
-              }
-              if (!firstMatch.localteam_overs) {
-                firstMatch.localteam_overs = '15.2';
-              }
-              
-              matchesToShow = [firstMatch];
+          // 1. Cricket live matches
+          const cricketLive = await fetchCricketLivescores();
+          const cricketMatches = cricketLive.filter(m => m.status === 'live').map(m => ({
+            id: m.id,
+            sport: 'cricket' as const,
+            league: CRICKET_LEAGUES.find(l => l.id === m.league_id)?.name || 'Cricket',
+            teamA: CRICKET_TEAM_NAMES[m.localteam_id] || 'Team A',
+            teamB: CRICKET_TEAM_NAMES[m.visitorteam_id] || 'Team B',
+            time: 'Live',
+            date: today.toLocaleDateString(),
+            isLive: true,
+            odds: {
+              teamA: 1.8 + Math.random() * 0.4,
+              draw: 3.0 + Math.random() * 1.0,
+              teamB: 1.8 + Math.random() * 0.4
+            },
+            stats: {
+              teamAScore: m.localteam_score || '0',
+              teamBScore: m.visitorteam_score || '0',
+              period: 'Live',
+              timeElapsed: m.live_score ? `${m.live_score.overs} overs` : 'In Progress'
             }
-            
-            // Map IPL live matches to our Match format
-            cricketMatches = matchesToShow.map(m => convertToMatch(m, true, today.toLocaleDateString()));
-            
-            console.log(`Using ${cricketMatches.length} IPL cricket matches for in-play tab`);
-            
-            // If still no matches (which shouldn't happen with our fallback), use general cricket
-            if (cricketMatches.length === 0) {
-              console.log('Fallback to general cricket matches');
-              const cricketLive = await fetchCricketLivescores();
-              const generalCricketMatches = cricketLive.filter(m => m.status === 'live').map(m => {
-                // Handle the specific type for league_id
-                const leagueName = CRICKET_LEAGUES.find(l => 
-                  // Safely access league_id if it exists
-                  'league_id' in m && l.id === (m as any).league_id
-                )?.name || 'Cricket';
-                
-                return {
-                  id: typeof m.id === 'string' ? parseInt(m.id) : m.id,
-                  sport: 'cricket' as const,
-                  league: leagueName,
-                  teamA: m.localteam_name || CRICKET_TEAM_NAMES[m.localteam_id] || 'Team A',
-                  teamB: m.visitorteam_name || CRICKET_TEAM_NAMES[m.visitorteam_id] || 'Team B',
-                  time: 'Live',
-                  date: today.toLocaleDateString(),
-                  isLive: true,
-                  odds: {
-                    teamA: 1.8 + Math.random() * 0.4,
-                    draw: 3.0 + Math.random() * 1.0,
-                    teamB: 1.8 + Math.random() * 0.4
-                  },
-                  stats: {
-                    teamAScore: m.localteam_score || '0',
-                    teamBScore: m.visitorteam_score || '0',
-                    period: 'Live',
-                    timeElapsed: 'In Progress'
-                  }
-                };
-              });
-              
-              cricketMatches = [...cricketMatches, ...generalCricketMatches];
-            }
-          } catch (error) {
-            console.error('Error fetching live IPL matches:', error);
-            // Fallback to original implementation
-            const cricketLive = await fetchCricketLivescores();
-            cricketMatches = cricketLive.filter(m => m.status === 'live').map(m => {
-              // Handle the specific type for league_id
-              const leagueName = CRICKET_LEAGUES.find(l => 
-                // Safely access league_id if it exists
-                'league_id' in m && l.id === (m as any).league_id
-              )?.name || 'Cricket';
-              
-              return {
-                id: typeof m.id === 'string' ? parseInt(m.id) : m.id,
-                sport: 'cricket' as const,
-                league: leagueName,
-                teamA: m.localteam_name || CRICKET_TEAM_NAMES[m.localteam_id] || 'Team A',
-                teamB: m.visitorteam_name || CRICKET_TEAM_NAMES[m.visitorteam_id] || 'Team B',
-                time: 'Live',
-                date: today.toLocaleDateString(),
-                isLive: true,
-                odds: {
-                  teamA: 1.8 + Math.random() * 0.4,
-                  draw: 3.0 + Math.random() * 1.0,
-                  teamB: 1.8 + Math.random() * 0.4
-                },
-                stats: {
-                  teamAScore: m.localteam_score || '0',
-                  teamBScore: m.visitorteam_score || '0',
-                  period: 'Live',
-                  timeElapsed: 'In Progress'
-                }
-              };
-            });
-          }
+          }));
           
           // 2. Football live matches
+          // For mocking purposes, use any available football fixtures
           const footballLive = await fetchFootballLivescores();
           const footballMatches = footballLive.map(m => ({
             id: m.id,
             sport: 'football' as const,
             league: FOOTBALL_LEAGUES.find(l => l.id === m.league_id)?.name || 'Football',
-            teamA: FOOTBALL_TEAM_NAMES[m.localteam_id] || `Team ${m.localteam_id}`,
-            teamB: FOOTBALL_TEAM_NAMES[m.visitorteam_id] || `Team ${m.visitorteam_id}`,
+            teamA: m.localteam_id.toString(),
+            teamB: m.visitorteam_id.toString(),
             time: 'Live',
             date: today.toLocaleDateString(),
             isLive: true,
@@ -302,74 +162,28 @@ const InPlayGamesPanel: React.FC = () => {
         } 
         // Today's matches
         else if (activeTab === 'today') {
-          // Cricket fixtures for today - focus on IPL matches
-          let cricketToday: Match[] = [];
-          try {
-            console.log('Fetching today\'s IPL cricket matches...');
-            const iplMatches = await getIPLMatches();
-            // For type safety, check date properties with any
-            const todayIplMatches = iplMatches.filter(m => {
-              // Check if date exists in API response
-              const dateStr = (m as any).starting_at || m.date || '';
-              if (!dateStr) return false;
-              
-              const matchDate = new Date(dateStr).toDateString();
-              return matchDate === today.toDateString() && m.status !== 'live';
-            });
-            
-            // Map IPL matches to our Match format
-            cricketToday = todayIplMatches.map(m => convertToMatch(m, false, 'Today'));
-            
-            console.log(`Found ${cricketToday.length} today's IPL matches`);
-            
-            // If no IPL matches found for today, fall back to original implementation
-            if (cricketToday.length === 0) {
-              for (const league of CRICKET_LEAGUES) {
-                const fixtures = await fetchCricketFixturesBySeason(league.seasonId);
-                cricketToday.push(...fixtures
-                  .filter(f => f.starting_at && f.starting_at.startsWith(todayFormatted) && f.status !== 'live')
-                  .map(m => ({
-                    id: typeof m.id === 'string' ? parseInt(m.id) : m.id,
-                    sport: 'cricket' as const,
-                    league: league.name,
-                    teamA: CRICKET_TEAM_NAMES[m.localteam_id] || 'Team A',
-                    teamB: CRICKET_TEAM_NAMES[m.visitorteam_id] || 'Team B',
-                    time: new Date(m.starting_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
-                    date: 'Today',
-                    isLive: false,
-                    odds: {
-                      teamA: 1.8 + Math.random() * 0.4,
-                      draw: 3.0 + Math.random() * 1.0,
-                      teamB: 1.8 + Math.random() * 0.4
-                    }
-                  }))
-                );
-              }
-            }
-          } catch (error) {
-            console.error('Error fetching today\'s IPL matches:', error);
-            // Fallback to original implementation
-            for (const league of CRICKET_LEAGUES) {
-              const fixtures = await fetchCricketFixturesBySeason(league.seasonId);
-              cricketToday.push(...fixtures
-                .filter(f => f.starting_at && f.starting_at.startsWith(todayFormatted) && f.status !== 'live')
-                .map(m => ({
-                  id: typeof m.id === 'string' ? parseInt(m.id) : m.id,
-                  sport: 'cricket' as const,
-                  league: league.name,
-                  teamA: CRICKET_TEAM_NAMES[m.localteam_id] || 'Team A',
-                  teamB: CRICKET_TEAM_NAMES[m.visitorteam_id] || 'Team B',
-                  time: new Date(m.starting_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
-                  date: 'Today',
-                  isLive: false,
-                  odds: {
-                    teamA: 1.8 + Math.random() * 0.4,
-                    draw: 3.0 + Math.random() * 1.0,
-                    teamB: 1.8 + Math.random() * 0.4
-                  }
-                }))
-              );
-            }
+          // Cricket fixtures for today
+          const cricketToday = [];
+          for (const league of CRICKET_LEAGUES) {
+            const fixtures = await fetchCricketFixturesBySeason(league.seasonId);
+            cricketToday.push(...fixtures
+              .filter(f => f.starting_at.startsWith(todayFormatted) && f.status !== 'live')
+              .map(m => ({
+                id: m.id,
+                sport: 'cricket' as const,
+                league: league.name,
+                teamA: CRICKET_TEAM_NAMES[m.localteam_id] || 'Team A',
+                teamB: CRICKET_TEAM_NAMES[m.visitorteam_id] || 'Team B',
+                time: new Date(m.starting_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
+                date: 'Today',
+                isLive: false,
+                odds: {
+                  teamA: 1.8 + Math.random() * 0.4,
+                  draw: 3.0 + Math.random() * 1.0,
+                  teamB: 1.8 + Math.random() * 0.4
+                }
+              }))
+            );
           }
           
           // Football fixtures for today
@@ -432,81 +246,36 @@ const InPlayGamesPanel: React.FC = () => {
         } 
         // Tomorrow's matches
         else {
-          // For tomorrow, try to get IPL matches first
-          let tomorrowFixtures: Match[] = [];
+          // For simplicity, generate mock data for tomorrow
+          const tomorrowFixtures = [];
           
-          // Cricket fixtures - focus on IPL for tomorrow
-          try {
-            console.log('Fetching tomorrow\'s IPL cricket matches...');
-            const iplMatches = await getIPLMatches();
-            // For type safety, check date properties with any
-            const tomorrowIplMatches = iplMatches.filter(m => {
-              // Check if date exists in API response
-              const dateStr = (m as any).starting_at || m.date || '';
-              if (!dateStr) return false;
-              
-              const matchDate = new Date(dateStr).toDateString();
-              return matchDate === tomorrow.toDateString();
+          // Cricket fixtures
+          CRICKET_LEAGUES.forEach((league, idx) => {
+            tomorrowFixtures.push({
+              id: 10000 + idx,
+              sport: 'cricket' as const,
+              league: league.name,
+              teamA: Object.values(CRICKET_TEAM_NAMES)[Math.floor(Math.random() * Object.values(CRICKET_TEAM_NAMES).length)],
+              teamB: Object.values(CRICKET_TEAM_NAMES)[Math.floor(Math.random() * Object.values(CRICKET_TEAM_NAMES).length)],
+              time: `${12 + Math.floor(Math.random() * 8)}:${Math.floor(Math.random() * 6)}0`,
+              date: 'Tomorrow',
+              isLive: false,
+              odds: {
+                teamA: 1.8 + Math.random() * 0.4,
+                draw: 3.0 + Math.random() * 1.0,
+                teamB: 1.8 + Math.random() * 0.4
+              }
             });
-            
-            // Map IPL matches to our Match format
-            const iplTomorrowMatches = tomorrowIplMatches.map(m => convertToMatch(m, false, 'Tomorrow'));
-            
-            console.log(`Found ${iplTomorrowMatches.length} tomorrow's IPL matches`);
-            tomorrowFixtures = iplTomorrowMatches;
-            
-            // If no IPL matches found for tomorrow, keep some of the mock data
-            if (tomorrowFixtures.length === 0) {
-              // Original mock code for cricket
-              CRICKET_LEAGUES.forEach((league, idx) => {
-                tomorrowFixtures.push({
-                  id: 10000 + idx,
-                  sport: 'cricket' as const,
-                  league: league.name,
-                  teamA: IPL_TEAMS[Math.floor(Math.random() * 5)],
-                  teamB: IPL_TEAMS[5 + Math.floor(Math.random() * 5)],
-                  time: `${12 + Math.floor(Math.random() * 8)}:${Math.floor(Math.random() * 6)}0`,
-                  date: 'Tomorrow',
-                  isLive: false,
-                  odds: {
-                    teamA: 1.8 + Math.random() * 0.4,
-                    draw: 3.0 + Math.random() * 1.0,
-                    teamB: 1.8 + Math.random() * 0.4
-                  }
-                });
-              });
-            }
-          } catch (error) {
-            console.error('Error fetching tomorrow\'s IPL matches:', error);
-            // Fallback to original mock implementation
-            CRICKET_LEAGUES.forEach((league, idx) => {
-              tomorrowFixtures.push({
-                id: 10000 + idx,
-                sport: 'cricket' as const,
-                league: league.name,
-                teamA: IPL_TEAMS[Math.floor(Math.random() * 5)],
-                teamB: IPL_TEAMS[5 + Math.floor(Math.random() * 5)],
-                time: `${12 + Math.floor(Math.random() * 8)}:${Math.floor(Math.random() * 6)}0`,
-                date: 'Tomorrow',
-                isLive: false,
-                odds: {
-                  teamA: 1.8 + Math.random() * 0.4,
-                  draw: 3.0 + Math.random() * 1.0,
-                  teamB: 1.8 + Math.random() * 0.4
-                }
-              });
-            });
-          }
+          });
           
-          // Keep the rest of the sports with mock data
           // Football fixtures
           FOOTBALL_LEAGUES.forEach((league, idx) => {
             tomorrowFixtures.push({
               id: 20000 + idx,
               sport: 'football' as const,
               league: league.name,
-              teamA: Object.values(FOOTBALL_TEAM_NAMES)[Math.floor(Math.random() * 5)],
-              teamB: Object.values(FOOTBALL_TEAM_NAMES)[5 + Math.floor(Math.random() * 5)],
+              teamA: ['Arsenal', 'Manchester City', 'Liverpool', 'Chelsea', 'Manchester United'][Math.floor(Math.random() * 5)],
+              teamB: ['Tottenham', 'Newcastle', 'Aston Villa', 'Brighton', 'West Ham'][Math.floor(Math.random() * 5)],
               time: `${12 + Math.floor(Math.random() * 8)}:${Math.floor(Math.random() * 6)}0`,
               date: 'Tomorrow',
               isLive: false,

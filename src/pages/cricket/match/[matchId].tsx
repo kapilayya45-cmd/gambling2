@@ -9,7 +9,8 @@ import MarketTabs, { BettingMarket } from '@/components/cricket/MarketTabs';
 import BetSlip from '@/components/BetSlip';
 import { CompatibleMatch } from '@/types/oddsApiTypes';
 import { IPL_CONFIG } from '@/config/oddsApiConfig';
-import { formatTeamName, getTeamAbbreviation, createShortTitle } from '@/utils/teamUtils';
+import { useBetSlip } from '@/contexts/BetSlipContext';
+import MatchWinnerUI from '@/components/cricket/MatchWinnerUI';
 
 // Format date for display
 function formatDate(dateString: string): string {
@@ -52,15 +53,7 @@ export default function CricketMatchPage() {
         const data = await response.json();
         if (data.status && data.data) {
           console.log("Match data received:", data.data);
-          
-          // Format the team names before setting the match data
-          const matchData = data.data;
-          matchData.localteam_name = formatTeamName(matchData.localteam_name);
-          matchData.visitorteam_name = formatTeamName(matchData.visitorteam_name);
-          matchData.title = `${matchData.localteam_name} vs ${matchData.visitorteam_name}`;
-          matchData.short_title = createShortTitle(matchData.localteam_name, matchData.visitorteam_name);
-          
-          setMatch(matchData);
+          setMatch(data.data);
         } else {
           throw new Error(data.message || 'Failed to get match data');
         }
@@ -107,17 +100,12 @@ export default function CricketMatchPage() {
     );
   }
 
-  // Get team names from match (already formatted by now)
+  // Get team names from match
   const homeTeam = match.localteam_name;
   const awayTeam = match.visitorteam_name;
   
-  // Get abbreviations
-  const homeAbbr = getTeamAbbreviation(homeTeam);
-  const awayAbbr = getTeamAbbreviation(awayTeam);
-  
   // Make sure we use proper formatted names
   const matchTitle = `${homeTeam} vs ${awayTeam}`;
-  const shortTitle = `${homeAbbr} vs ${awayAbbr}`;
   const matchDate = match.date ? formatDate(`${match.date}T${match.time}`) : 'TBD';
   const isLive = match.is_live || match.status === 'live';
 
@@ -214,33 +202,12 @@ export default function CricketMatchPage() {
                     
                     <div className="mt-4">
                       {activeMarket === 'match-winner' && (
-                        <div className="grid grid-cols-3 gap-4">
-                          <div 
-                            className="p-4 bg-[#1a1f2c] rounded-lg text-center cursor-pointer hover:bg-[#262c3a] transition-colors"
-                            onClick={() => handleSelectOdds({ team: homeTeam, odds: homeOdds })}
-                          >
-                            <div className="mb-2 text-gray-400">{homeTeam}</div>
-                            <div className="text-xl font-bold">
-                              {formatOdds(homeOdds)}
-                            </div>
-                          </div>
-                          <div 
-                            className="p-4 bg-[#1a1f2c] rounded-lg text-center cursor-pointer hover:bg-[#262c3a] transition-colors"
-                            onClick={() => handleSelectOdds({ team: 'Draw', odds: 450 })}
-                          >
-                            <div className="mb-2 text-gray-400">Draw</div>
-                            <div className="text-xl font-bold">₹450.00</div>
-                          </div>
-                          <div 
-                            className="p-4 bg-[#1a1f2c] rounded-lg text-center cursor-pointer hover:bg-[#262c3a] transition-colors"
-                            onClick={() => handleSelectOdds({ team: awayTeam, odds: awayOdds })}
-                          >
-                            <div className="mb-2 text-gray-400">{awayTeam}</div>
-                            <div className="text-xl font-bold">
-                              {formatOdds(awayOdds)}
-                            </div>
-                          </div>
-                        </div>
+                        <MatchWinnerUI 
+                          odds={{
+                            [homeTeam]: homeOdds || 0,
+                            [awayTeam]: awayOdds || 0
+                          }}
+                        />
                       )}
                       
                       {activeMarket !== 'match-winner' && (

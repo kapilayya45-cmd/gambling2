@@ -8,17 +8,29 @@ const LOCAL_FIXTURES_API = '/api/cricket/fixtures';
 
 // Team name mapping for UI presentation
 export const CRICKET_TEAM_NAMES: Record<string, string> = {
-  // Common IPL team mappings
+  // Current IPL teams for 2024 season
   'MI': 'Mumbai Indians',
   'CSK': 'Chennai Super Kings',
-  'RCB': 'Royal Challengers Bangalore',
+  'RCB': 'Royal Challengers Bengaluru',  // Updated name from Bangalore
   'KKR': 'Kolkata Knight Riders',
   'DC': 'Delhi Capitals',
   'RR': 'Rajasthan Royals',
   'SRH': 'Sunrisers Hyderabad',
   'PBKS': 'Punjab Kings',
   'GT': 'Gujarat Titans',
-  'LSG': 'Lucknow Super Giants'
+  'LSG': 'Lucknow Super Giants',
+  
+  // Use these same names for team IDs
+  '1': 'Mumbai Indians',
+  '2': 'Chennai Super Kings',
+  '3': 'Royal Challengers Bengaluru',
+  '4': 'Kolkata Knight Riders',
+  '5': 'Delhi Capitals',
+  '6': 'Rajasthan Royals',
+  '7': 'Sunrisers Hyderabad',
+  '8': 'Punjab Kings',
+  '9': 'Gujarat Titans',
+  '10': 'Lucknow Super Giants'
 };
 
 // Re-export the types

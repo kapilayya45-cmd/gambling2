@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const serviceAccount = require('../firebase-service-account.json');
+ // compiled to functions/lib/index.js, so go up two levels:
+const serviceAccount = require('../../firebase-service-account.json');
 
 // Updated initialization with service account credentials
 admin.initializeApp({

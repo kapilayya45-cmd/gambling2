@@ -1,3 +1,5 @@
+// src/services/oddsApiService.ts
+
 import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 import { ODDS_API, ENDPOINTS, MARKETS, DEFAULT_PARAMS, IPL_CONFIG } from '@/config/oddsApiConfig';
 import { Match, LiveScore, CompatibleMatch } from '@/types/oddsApiTypes';
@@ -19,17 +21,25 @@ const API_CACHE = {
 /**
  * Build common Axios request options for RapidAPI
  */
-const createRequestOptions = (params: Record<string, any> = {}): AxiosRequestConfig => ({
-  baseURL: ODDS_API.BASE_URL,
-  headers: {
-    'X-RapidAPI-Key': ODDS_API.RAPID_API_KEY,
-    'X-RapidAPI-Host': ODDS_API.RAPID_API_HOST,
-  },
-  params: {
-    ...DEFAULT_PARAMS,
-    ...params,
-  },
-});
+const createRequestOptions = (params: Record<string, any> = {}): AxiosRequestConfig => {
+  const apiKey = ODDS_API.RAPID_API_KEY;
+  
+  if (!apiKey || apiKey === 'temp_api_key_for_testing_ipl_data') {
+    console.warn('WARN: Using a placeholder API key. Please set a valid NEXT_PUBLIC_RAPID_API_KEY in .env.local');
+  }
+  
+  return {
+    baseURL: ODDS_API.BASE_URL,
+    headers: {
+      'X-RapidAPI-Key': apiKey,
+      'X-RapidAPI-Host': ODDS_API.RAPID_API_HOST,
+    },
+    params: {
+      ...DEFAULT_PARAMS,
+      ...params,
+    },
+  };
+};
 
 // Check if cache is still valid
 const isCacheValid = (key: 'matches' | 'liveScores') => {
@@ -283,6 +293,10 @@ export const getIPLMatches = async (): Promise<CompatibleMatch[]> => {
   const opts = createRequestOptions();
   
   console.log("Attempting to fetch IPL matches...");
+  console.log(`Using API host: ${ODDS_API.RAPID_API_HOST}`);
+  console.log(`API key available: ${Boolean(ODDS_API.RAPID_API_KEY)}`);
+  console.log(`API key length: ${ODDS_API.RAPID_API_KEY.length}`);
+  console.log(`Using base URL: ${ODDS_API.BASE_URL}`);
   
   try {
     // Try all possible cricket endpoints
@@ -291,6 +305,7 @@ export const getIPLMatches = async (): Promise<CompatibleMatch[]> => {
     // 1. First try tournament-specific endpoint
     try {
       console.log("Trying tournament-specific endpoint...");
+      console.log(`URL: ${ENDPOINTS.TOURNAMENT_MATCHES}`);
       if (ENDPOINTS.TOURNAMENT_MATCHES) {
         const resp = await axios.get(ENDPOINTS.TOURNAMENT_MATCHES, opts);
         const data = resp.data.data ?? resp.data;
@@ -304,6 +319,7 @@ export const getIPLMatches = async (): Promise<CompatibleMatch[]> => {
     // 2. Try regular endpoint
     try {
       console.log("Trying regular endpoint...");
+      console.log(`URL: ${ENDPOINTS.UPCOMING_MATCHES}`);
       const resp = await axios.get(ENDPOINTS.UPCOMING_MATCHES, opts);
       const data = resp.data.data ?? resp.data;
       console.log(`Regular endpoint returned ${data.length} matches`);
@@ -316,6 +332,7 @@ export const getIPLMatches = async (): Promise<CompatibleMatch[]> => {
     if (allMatches.length === 0) {
       try {
         console.log("Trying ALL_CRICKET fallback...");
+        console.log(`URL: ${ENDPOINTS.ALL_CRICKET}`);
         const resp = await axios.get(ENDPOINTS.ALL_CRICKET, opts);
         const data = resp.data.data ?? resp.data;
         console.log(`ALL_CRICKET endpoint returned ${data.length} matches`);
@@ -368,125 +385,56 @@ export const getIPLMatches = async (): Promise<CompatibleMatch[]> => {
     
     console.log(`Found ${iplMatches.length} IPL matches`);
     
-    // If no IPL matches found through filtering, create some demo matches
-    if (iplMatches.length === 0) {
-      console.log("No IPL matches found through API - creating demo matches");
-      
-      // Create demo matches using the specific event IDs
-      const demoMatches: Match[] = [
-        {
-          id: "id2700247260533321",
-          sport_key: "cricket_ipl",
-          sport_title: "Cricket",
-          commence_time: "2025-06-01T14:00:00Z",
-          home_team: "Mumbai Indians",
-          away_team: "Chennai Super Kings",
-          league: "Indian Premier League",
-          bookmakers: [{
-            key: "demo",
-            title: "Demo Bookmaker",
-            last_update: new Date().toISOString(),
-            markets: [{
-              key: "h2h",
-              last_update: new Date().toISOString(),
-              outcomes: [
-                { name: "Mumbai Indians", price: 1.85 },
-                { name: "Chennai Super Kings", price: 1.95 }
-              ]
-            }]
-          }]
-        },
-        {
-          id: "id2700247260533347",
-          sport_key: "cricket_ipl",
-          sport_title: "Cricket",
-          commence_time: "2025-06-03T14:00:00Z",
-          home_team: "Royal Challengers Bangalore",
-          away_team: "Kolkata Knight Riders",
-          league: "Indian Premier League",
-          bookmakers: [{
-            key: "demo",
-            title: "Demo Bookmaker",
-            last_update: new Date().toISOString(),
-            markets: [{
-              key: "h2h",
-              last_update: new Date().toISOString(),
-              outcomes: [
-                { name: "Royal Challengers Bangalore", price: 2.10 },
-                { name: "Kolkata Knight Riders", price: 1.75 }
-              ]
-            }]
-          }]
-        },
-        {
-          id: "id2700247260533349",
-          sport_key: "cricket_ipl",
-          sport_title: "Cricket",
-          commence_time: "2025-06-05T14:00:00Z",
-          home_team: "Delhi Capitals",
-          away_team: "Rajasthan Royals",
-          league: "Indian Premier League",
-          bookmakers: [{
-            key: "demo",
-            title: "Demo Bookmaker",
-            last_update: new Date().toISOString(),
-            markets: [{
-              key: "h2h",
-              last_update: new Date().toISOString(),
-              outcomes: [
-                { name: "Delhi Capitals", price: 1.90 },
-                { name: "Rajasthan Royals", price: 1.90 }
-              ]
-            }]
-          }]
-        }
-      ];
-      
-      // Add to IPL matches
-      iplMatches.push(...demoMatches);
-    }
+    // Check for actual match data first
+    if (iplMatches.length > 0) {
+      // Get live scores to merge with match data
+      let liveScores: LiveScore[] = [];
+      try {
+        console.log("Fetching live scores...");
+        const liveResp = await axios.get(ENDPOINTS.LIVE_SCORES, opts);
+        liveScores = liveResp.data.data ?? liveResp.data;
+        console.log(`Retrieved ${liveScores.length} live scores`);
+      } catch (err) {
+        console.warn("Failed to fetch live scores", err);
+      }
 
-    // Get live scores to merge with match data
-    let liveScores: LiveScore[] = [];
-    try {
-      console.log("Fetching live scores...");
-      const liveResp = await axios.get(ENDPOINTS.LIVE_SCORES, opts);
-      liveScores = liveResp.data.data ?? liveResp.data;
-      console.log(`Retrieved ${liveScores.length} live scores`);
-    } catch (err) {
-      console.warn("Failed to fetch live scores", err);
-      // Create demo live score for first match
-      if (iplMatches.length > 0) {
-        const firstMatch = iplMatches[0];
-        liveScores = [{
-          id: firstMatch.id,
-          sport_key: firstMatch.sport_key,
-          sport_title: firstMatch.sport_title,
-          commence_time: firstMatch.commence_time,
-          completed: false,
-          home_team: firstMatch.home_team,
-          away_team: firstMatch.away_team,
-          scores: {
-            home: { score: "142/3", overs: "15.2" },
-            away: { score: "", overs: "" }
-          }
-        }];
+      // Convert to compatible format
+      const compatibleMatches = iplMatches.map(match => {
+        const live = liveScores.find(ls => ls.id === match.id);
+        return convertToCompatibleFormat(match, live);
+      });
+      
+      console.log(`Returning ${compatibleMatches.length} real IPL matches`);
+      return compatibleMatches;
+    }
+    
+    // If explicitly configured matches exist, try to fetch those directly
+    if (IPL_CONFIG.KNOWN_MATCHES && IPL_CONFIG.KNOWN_MATCHES.length > 0) {
+      console.log("No IPL matches found through API - trying known match IDs");
+      
+      const knownMatchPromises = IPL_CONFIG.KNOWN_MATCHES.map(async (known) => {
+        try {
+          return await getMatchDetails(known.matchId);
+        } catch (err) {
+          console.warn(`Failed to fetch known match ID ${known.matchId}:`, err);
+          return null;
+        }
+      });
+      
+      const knownMatches = (await Promise.all(knownMatchPromises))
+        .filter(Boolean) as CompatibleMatch[];
+      
+      if (knownMatches.length > 0) {
+        console.log(`Found ${knownMatches.length} matches from known IDs`);
+        return knownMatches;
       }
     }
-
-    // Convert to compatible format
-    const compatibleMatches = iplMatches.map(match => {
-      const live = liveScores.find(ls => ls.id === match.id);
-      return convertToCompatibleFormat(match, live);
-    });
     
-    console.log(`Returning ${compatibleMatches.length} compatible IPL matches`);
-    
-    return compatibleMatches;
+    // As a last resort, use mock data
+    console.log("No real matches found - returning demo data");
+    return createFallbackMatches();
   } catch (error) {
     console.error('getIPLMatches error:', error);
-    
-    // Create fallback matches for demo
     console.log("Error in getIPLMatches - creating fallback matches");
     return createFallbackMatches();
   }
@@ -508,17 +456,23 @@ function createFallbackMatches(): CompatibleMatch[] {
     'Lucknow Super Giants': 'LSG'
   };
 
+  // Always use current date and time
+  const currentDate = new Date().toISOString().split('T')[0];
+  const hours = new Date().getHours();
+  const mins = new Date().getMinutes();
+  const currentTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:00`;
+
   return [
     {
       id: "id2700247260533321",
       title: "Mumbai Indians vs Chennai Super Kings",
       short_title: `${teamAbbreviations['Mumbai Indians']} vs ${teamAbbreviations['Chennai Super Kings']}`,
-      status: "live",
+      status: "live", // Always live for in-play tab
       status_str: "Live",
       competition_name: "Indian Premier League",
       competition_id: "ipl",
-      date: "2025-06-01",
-      time: "14:00:00",
+      date: currentDate, // Always today
+      time: currentTime, // Current time
       localteam_id: "mumbai_indians",
       localteam_name: "Mumbai Indians",
       localteam_score: "142/3",
@@ -528,7 +482,7 @@ function createFallbackMatches(): CompatibleMatch[] {
       visitorteam_score: "",
       visitorteam_overs: "",
       venue_name: "Wankhede Stadium",
-      is_live: true,
+      is_live: true, // Always true for in-play tab
       betting_odds: {
         match_winner: {
           "Mumbai Indians": 150.85,
@@ -544,8 +498,8 @@ function createFallbackMatches(): CompatibleMatch[] {
       status_str: "Not Started",
       competition_name: "Indian Premier League",
       competition_id: "ipl",
-      date: "2025-06-03",
-      time: "14:00:00",
+      date: currentDate, // Today
+      time: `${(hours + 3).toString().padStart(2, '0')}:00:00`, // 3 hours from now
       localteam_id: "royal_challengers_bangalore",
       localteam_name: "Royal Challengers Bangalore",
       localteam_score: "",
@@ -571,8 +525,8 @@ function createFallbackMatches(): CompatibleMatch[] {
       status_str: "Not Started",
       competition_name: "Indian Premier League",
       competition_id: "ipl",
-      date: "2025-06-05",
-      time: "14:00:00",
+      date: currentDate, // Today
+      time: `${(hours + 6).toString().padStart(2, '0')}:00:00`, // 6 hours from now
       localteam_id: "delhi_capitals",
       localteam_name: "Delhi Capitals",
       localteam_score: "",
@@ -600,16 +554,42 @@ export const getLiveIPLMatches = async (): Promise<CompatibleMatch[]> => {
   const opts = createRequestOptions();
   
   try {
-    // Fetch live scores with caching
-    const fetchLiveScores = async (): Promise<LiveScore[]> => {
-      const resp = await axios.get(ENDPOINTS.LIVE_SCORES, opts);
-      return resp.data.data ?? resp.data;
-    };
+    console.log("Fetching live IPL matches...");
     
-    const liveScores = await getFromCacheOrFetch<LiveScore[]>('liveScores', fetchLiveScores);
+    // Try different endpoints for live scores
+    let allLiveScores: LiveScore[] = [];
+    
+    // 1. Try the main live scores endpoint
+    try {
+      console.log("Trying main live scores endpoint...");
+      const resp = await axios.get(ENDPOINTS.LIVE_SCORES, opts);
+      const data = resp.data.data ?? resp.data;
+      console.log(`Main live scores endpoint returned ${data.length} matches`);
+      allLiveScores = [...allLiveScores, ...data];
+    } catch (err) {
+      console.warn("Main live scores endpoint failed", err);
+    }
+    
+    // 2. Try alternative endpoints if needed
+    if (allLiveScores.length === 0 && IPL_CONFIG.ALTERNATIVE_IDS.length > 0) {
+      for (const altId of IPL_CONFIG.ALTERNATIVE_IDS) {
+        try {
+          console.log(`Trying alternative ID ${altId} for live scores...`);
+          const altEndpoint = `/sports/${altId}/scores`;
+          const resp = await axios.get(altEndpoint, opts);
+          const data = resp.data.data ?? resp.data;
+          console.log(`Alternative endpoint returned ${data.length} matches`);
+          allLiveScores = [...allLiveScores, ...data];
+        } catch (err) {
+          console.warn(`Alternative endpoint for ${altId} failed`, err);
+        }
+      }
+    }
+    
+    console.log(`Total live scores found: ${allLiveScores.length}`);
     
     // Filter for IPL matches using our configuration
-    const liveIpl = liveScores.filter(ls =>
+    const liveIpl = allLiveScores.filter(ls =>
       // Match by exact tournament ID
       (ls.tournament_id === IPL_CONFIG.EXACT_TOURNAMENT_ID) ||
       // Match by tournament key
@@ -620,24 +600,87 @@ export const getLiveIPLMatches = async (): Promise<CompatibleMatch[]> => {
       (ls.home_team && ls.away_team && 
        IPL_CONFIG.TEAMS.includes(ls.home_team) && IPL_CONFIG.TEAMS.includes(ls.away_team))
     );
-
-    // Get match data from cache or fetch new
-    const fetchOddsData = async (): Promise<Match[]> => {
-      const resp = await axios.get(ENDPOINTS.UPCOMING_MATCHES, opts);
-      return resp.data.data ?? resp.data;
-    };
     
-    const oddsData = await getFromCacheOrFetch<Match[]>('matches', fetchOddsData);
+    console.log(`Found ${liveIpl.length} live IPL matches`);
+    
+    if (liveIpl.length > 0) {
+      // Get match data from cache or fetch new
+      const fetchOddsData = async (): Promise<Match[]> => {
+        const resp = await axios.get(ENDPOINTS.UPCOMING_MATCHES, opts);
+        return resp.data.data ?? resp.data;
+      };
+      
+      const oddsData = await getFromCacheOrFetch<Match[]>('matches', fetchOddsData);
 
-    return liveIpl.map(liveMatch => {
-      const matchOdds = oddsData.find(o => o.id === liveMatch.id);
-      return convertToCompatibleFormat(
-        matchOdds ?? ({ ...liveMatch, bookmakers: [] } as Match),
-        liveMatch
-      );
-    });
+      // Convert live matches to our format
+      const liveMatches = liveIpl.map(liveMatch => {
+        const matchOdds = oddsData.find(o => o.id === liveMatch.id);
+        return convertToCompatibleFormat(
+          matchOdds ?? ({ ...liveMatch, bookmakers: [] } as Match),
+          liveMatch
+        );
+      });
+      
+      console.log(`Returning ${liveMatches.length} real live IPL matches`);
+      return liveMatches;
+    }
+    
+    // If no live matches found, try to get regular matches and filter for any that might be live
+    console.log("No live IPL matches found, checking known matches...");
+    const allMatches = await getIPLMatches();
+    const possiblyLiveMatches = allMatches.filter(m => m.is_live);
+    
+    if (possiblyLiveMatches.length > 0) {
+      console.log(`Found ${possiblyLiveMatches.length} possibly live matches from regular data`);
+      return possiblyLiveMatches;
+    }
+    
+    // If we still couldn't find any live matches, return mock live match data
+    console.log("No live IPL matches found anywhere, using mock live data");
+    const mockLiveMatches = createFallbackMatches().filter(m => m.status === 'live' || m.is_live);
+    
+    // If there are no live mock matches, take the first mock match and make it live
+    if (mockLiveMatches.length === 0) {
+      const allMockMatches = createFallbackMatches();
+      if (allMockMatches.length > 0) {
+        const firstMatch = { ...allMockMatches[0] };
+        firstMatch.status = 'live';
+        firstMatch.status_str = 'Live';
+        firstMatch.is_live = true;
+        firstMatch.localteam_score = '98/2';
+        firstMatch.localteam_overs = '12.3';
+        console.log("Created a live match from mock data");
+        return [firstMatch];
+      }
+    } else {
+      console.log(`Found ${mockLiveMatches.length} mock live matches`);
+      return mockLiveMatches;
+    }
+    
+    // If we reach here, we couldn't find any real or mock matches
+    console.log("No IPL matches found at all");
+    return [];
   } catch (error) {
     console.error('getLiveIPLMatches error:', error);
+    
+    // Even in case of error, return mock live match data
+    console.log("Error in getLiveIPLMatches - creating fallback live match");
+    const mockLiveMatches = createFallbackMatches().filter(m => m.status === 'live' || m.is_live);
+    if (mockLiveMatches.length > 0) {
+      return mockLiveMatches;
+    } else {
+      const allMockMatches = createFallbackMatches();
+      if (allMockMatches.length > 0) {
+        const firstMatch = { ...allMockMatches[0] };
+        firstMatch.status = 'live';
+        firstMatch.status_str = 'Live';
+        firstMatch.is_live = true;
+        firstMatch.localteam_score = '98/2';
+        firstMatch.localteam_overs = '12.3';
+        return [firstMatch];
+      }
+    }
+    
     return [];
   }
 };
@@ -740,18 +783,19 @@ export const fetchIPLOdds = async (): Promise<CompatibleMatch[]> => {
     // First try to get regular IPL matches
     const iplMatches = await getIPLMatches();
     
-    // Then fetch specific known match IDs if configured
-    if (IPL_CONFIG.KNOWN_MATCH_IDS && IPL_CONFIG.KNOWN_MATCH_IDS.length > 0) {
-      const knownMatchPromises = IPL_CONFIG.KNOWN_MATCH_IDS.map(async (matchId) => {
+    // Then fetch specific known matches if configured
+    if (IPL_CONFIG.KNOWN_MATCHES && IPL_CONFIG.KNOWN_MATCHES.length > 0) {
+      const knownMatchPromises = IPL_CONFIG.KNOWN_MATCHES.map(async (known) => {
         try {
           // Check if this match is already in our results
+          const matchId = known.matchId;
           const existingMatch = iplMatches.find(m => m.id === matchId);
           if (existingMatch) return null;
           
           // If not, fetch it directly
           return await getMatchDetails(matchId);
         } catch (error) {
-          console.warn(`Failed to fetch known match ID ${matchId}:`, error);
+          console.warn(`Failed to fetch known match ID ${known.matchId}:`, error);
           return null;
         }
       });

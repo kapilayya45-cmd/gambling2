@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BettingMarket } from './MarketTabs';
+import { useWallet } from '@/contexts/WalletContext';
 
 interface InlineBetEntryProps {
   selection: string;
@@ -14,6 +15,7 @@ interface InlineBetEntryProps {
     odds: number;
     stake: number;
   }) => void;
+  walletBalance?: number; // Optional prop to pass wallet balance from parent
 }
 
 const InlineBetEntry: React.FC<InlineBetEntryProps> = ({
@@ -22,13 +24,30 @@ const InlineBetEntry: React.FC<InlineBetEntryProps> = ({
   odds: initialOdds,
   side,
   onCancel,
-  onPlaceBet
+  onPlaceBet,
+  walletBalance: externalBalance
 }) => {
   const [stake, setStake] = useState<number>(0);
   const [odds, setOdds] = useState<number>(initialOdds);
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const { balance: contextBalance } = useWallet();
+  
+  // Use external balance if provided, otherwise use context balance
+  const walletBalance = externalBalance !== undefined ? externalBalance : contextBalance;
   
   // Quick stake options
   const quickStakeOptions = [100, 200, 500, 1000, 5000, 10000];
+  
+  // Validate stake when it changes
+  useEffect(() => {
+    if (stake > walletBalance) {
+      setErrorMessage(`Insufficient balance. Available: ₹${walletBalance.toLocaleString()}`);
+    } else if (stake <= 0) {
+      setErrorMessage("");
+    } else {
+      setErrorMessage("");
+    }
+  }, [stake, walletBalance]);
   
   // Increment/decrement odds
   const adjustOdds = (increment: boolean) => {
@@ -51,7 +70,7 @@ const InlineBetEntry: React.FC<InlineBetEntryProps> = ({
   
   // Handle place bet
   const handlePlaceBet = () => {
-    if (stake > 0) {
+    if (stake > 0 && stake <= walletBalance) {
       onPlaceBet({
         selection,
         market,
@@ -59,6 +78,8 @@ const InlineBetEntry: React.FC<InlineBetEntryProps> = ({
         odds,
         stake
       });
+    } else if (stake > walletBalance) {
+      setErrorMessage(`Insufficient balance. Available: ₹${walletBalance.toLocaleString()}`);
     }
   };
   
@@ -103,10 +124,12 @@ const InlineBetEntry: React.FC<InlineBetEntryProps> = ({
               type="number"
               value={stake || ''}
               onChange={handleStakeChange}
-              className="w-24 bg-white border border-gray-300 rounded py-1 px-2 text-gray-800 text-right"
+              className={`w-24 bg-white border ${errorMessage ? 'border-red-500' : 'border-gray-300'} rounded py-1 px-2 text-gray-800 text-right`}
               placeholder="0"
               min="0"
+              max={walletBalance}
             />
+            {errorMessage && <div className="text-xs text-red-500 mt-1">{errorMessage}</div>}
           </div>
           
           <div>
@@ -118,10 +141,10 @@ const InlineBetEntry: React.FC<InlineBetEntryProps> = ({
           
           <button
             onClick={handlePlaceBet}
-            disabled={stake <= 0}
+            disabled={stake <= 0 || stake > walletBalance}
             className={`
               px-4 py-2 rounded font-medium text-white
-              ${stake > 0 
+              ${stake > 0 && stake <= walletBalance
                 ? `${side === 'back' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}` 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
             `}
@@ -137,11 +160,21 @@ const InlineBetEntry: React.FC<InlineBetEntryProps> = ({
           <button
             key={amount}
             onClick={() => applyQuickStake(amount)}
-            className="bg-white hover:bg-gray-100 border border-gray-300 px-3 py-1 rounded text-sm text-gray-700"
+            disabled={amount > walletBalance}
+            className={`
+              px-3 py-1 rounded text-sm text-gray-700
+              ${amount <= walletBalance
+                ? 'bg-white hover:bg-gray-100 border border-gray-300' 
+                : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'}
+            `}
           >
             ₹{amount.toLocaleString()}
           </button>
         ))}
+      </div>
+      
+      <div className="text-sm text-gray-600 mt-3 text-center">
+        Available balance: ₹{walletBalance.toLocaleString()}
       </div>
     </div>
   );

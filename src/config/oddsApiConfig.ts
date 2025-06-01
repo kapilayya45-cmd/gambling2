@@ -2,9 +2,9 @@
 
 // API configuration for ODDS-API via Rapid API
 export const ODDS_API = {
-  BASE_URL: 'https://odds.p.rapidapi.com/v4',
+  BASE_URL: 'https://odds-api1.p.rapidapi.com',
   RAPID_API_KEY: process.env.NEXT_PUBLIC_RAPID_API_KEY || '',
-  RAPID_API_HOST: 'odds.p.rapidapi.com',
+  RAPID_API_HOST: 'odds-api1.p.rapidapi.com',
   // Requests per minute limit - for rate limiting awareness
   RATE_LIMIT: 5,
 };
@@ -23,7 +23,7 @@ export const IPL_CONFIG = {
   SPORT_SLUG: 'cricket',         // Sport slug
   LEAGUE_NAME: 'Indian Premier League',
   CATEGORY_NAME: 'India',        // Country/region category
-  SEASON: '2023',                // Current season
+  SEASON: '2024',                // Current season
   TEAMS: [
     'Mumbai Indians',
     'Chennai Super Kings',
@@ -37,37 +37,46 @@ export const IPL_CONFIG = {
     'Lucknow Super Giants'
   ],
   // Known match IDs for specific IPL matches
-  KNOWN_MATCH_IDS: [
-    'id2700247260533321',  // Live match on June 1, 2025
-    'id2700247260533347',  // Upcoming match on June 3, 2025
-    'id2700247260533349',  // Another IPL match
+  KNOWN_MATCHES: [
+    {
+      matchId: 'id2700247260533347',
+      participant1Id: 152330,           // e.g. "Royal Challengers Bangalore" (your internal ID)
+      participant2Id: 152324,           // e.g. "Kolkata Knight Riders" (your internal ID)
+      betradarId:     60533347,         // Betradar feed ID for this match
+    },
+    {
+      matchId: 'id2700247260533349',
+      participant1Id: 1233373,         // e.g. "Delhi Capitals" (your internal ID)
+      participant2Id: 1233375,         // e.g. "Rajasthan Royals" (your internal ID)
+      betradarId:     null,            // Not yet available for this game
+    },
   ]
 };
 
 // Endpoints for cricket matches and odds
 export const ENDPOINTS = {
   // Get upcoming matches with odds
-  UPCOMING_MATCHES: `/sports/${IPL_CONFIG.TOURNAMENT_ID}/odds`,
+  UPCOMING_MATCHES: `/events?tournamentId=${IPL_CONFIG.EXACT_TOURNAMENT_ID}`,
   
   // Get live cricket scores
-  LIVE_SCORES: `/sports/${IPL_CONFIG.TOURNAMENT_ID}/scores`,
+  LIVE_SCORES: `/events?tournamentId=${IPL_CONFIG.EXACT_TOURNAMENT_ID}&liveData=true`,
   
   // Get historical match data
-  HISTORICAL: `/sports/${IPL_CONFIG.TOURNAMENT_ID}/scores-history`,
+  HISTORICAL: `/events?tournamentId=${IPL_CONFIG.EXACT_TOURNAMENT_ID}&historical=true`,
   
   // Get specific match details
   MATCH_ODDS: (matchId: string) => 
-    `/sports/${IPL_CONFIG.TOURNAMENT_ID}/odds/${matchId}`,
+    `/events/${matchId}?media=true`,
     
   // Alternative endpoint with exact tournament ID
-  TOURNAMENT_MATCHES: `/sports/cricket/tournaments/${IPL_CONFIG.EXACT_TOURNAMENT_ID}/odds`,
+  TOURNAMENT_MATCHES: `/events?tournamentId=${IPL_CONFIG.EXACT_TOURNAMENT_ID}&media=true`,
   
   // Generic cricket endpoint as fallback
-  ALL_CRICKET: `/sports/cricket/odds`,
+  ALL_CRICKET: `/events?sport=cricket`,
   
   // Direct access to a specific event by ID
   EVENT_BY_ID: (eventId: string) => 
-    `/events/${eventId}/odds`,
+    `/events/${eventId}?media=true`,
 };
 
 // Betting markets available

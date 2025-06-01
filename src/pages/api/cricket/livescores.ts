@@ -30,27 +30,43 @@ export default async function handler(
       },
     });
     
-    // Extract the data
-    const liveMatches = response.data.data || response.data || [];
+    // Extract the data - handle new API format
+    let liveMatches = [];
     
-    // Filter for IPL matches
-    const iplMatches = liveMatches.filter((match: any) => 
-      match.league_key === 'ipl' || 
-      (match.league && match.league.toLowerCase().includes('indian premier league'))
-    );
+    if (response.data && response.data.events) {
+      // New API format (odds-api1)
+      const eventsObj = response.data.events;
+      liveMatches = Object.values(eventsObj);
+      console.log(`Found ${liveMatches.length} events in new API format`);
+    } else {
+      console.warn("Unexpected API response format");
+      liveMatches = [];
+    }
+    
+    // Filter for IPL matches - handle new API format
+    const iplMatches = liveMatches.filter((match: any) => {
+      // We're using tournament ID 2472 which is already filtered for IPL
+      return match.eventStatus === 'live' || match.eventStatus === 'inprogress';
+    });
     
     console.log(`Found ${iplMatches.length} live IPL matches`);
     
     // Format matches into expected format for the frontend
     const formattedData = {
       data: iplMatches.map((match: any) => {
+        // Handle new API format
+        const homeTeam = match.participant1 || "";
+        const awayTeam = match.participant2 || "";
+        const matchTime = match.startTime ? new Date(match.startTime * 1000).toISOString() : new Date().toISOString();
+        const isCompleted = match.eventStatus === 'ended' || match.eventStatus === 'finished';
+        
         return {
-          id: match.id,
+          id: match.eventId || `match_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
           league_id: 'ipl',
-          localteam_id: match.home_team?.toLowerCase().replace(/\s+/g, '_'),
-          visitorteam_id: match.away_team?.toLowerCase().replace(/\s+/g, '_'),
-          starting_at: match.commence_time,
-          status: match.completed ? 'completed' : 'live',
+          localteam_id: homeTeam.toLowerCase().replace(/\s+/g, '_'),
+          visitorteam_id: awayTeam.toLowerCase().replace(/\s+/g, '_'),
+          starting_at: matchTime,
+          status: isCompleted ? 'completed' : 'live',
           venue_name: match.venue || 'TBD',
           venue_city: '',
           league: {
@@ -59,21 +75,21 @@ export default async function handler(
             code: 'IPL'
           },
           localteam: {
-            id: match.home_team?.toLowerCase().replace(/\s+/g, '_'),
-            name: match.home_team,
-            code: match.home_team?.split(' ')[0]?.toUpperCase(),
+            id: homeTeam.toLowerCase().replace(/\s+/g, '_'),
+            name: homeTeam,
+            code: homeTeam.split(' ')[0]?.toUpperCase(),
             image_path: ''
           },
           visitorteam: {
-            id: match.away_team?.toLowerCase().replace(/\s+/g, '_'),
-            name: match.away_team,
-            code: match.away_team?.split(' ')[0]?.toUpperCase(),
+            id: awayTeam.toLowerCase().replace(/\s+/g, '_'),
+            name: awayTeam,
+            code: awayTeam.split(' ')[0]?.toUpperCase(),
             image_path: ''
           },
-          localteam_score: match.scores?.home?.score || '',
-          visitorteam_score: match.scores?.away?.score || '',
-          toss_winner_team_id: match.toss?.winner || '',
-          toss_decision: match.toss?.decision || '',
+          localteam_score: match.localteam_score || '',
+          visitorteam_score: match.visitorteam_score || '',
+          toss_winner_team_id: match.toss_winner || '',
+          toss_decision: match.toss_decision || '',
           competition: {
             cid: 'ipl',
             title: 'Indian Premier League',
