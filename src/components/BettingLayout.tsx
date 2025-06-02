@@ -17,31 +17,62 @@ export const BettingLayout: React.FC<BettingLayoutProps> = ({ children }) => {
   };
   
   return (
-    <div className="flex flex-col h-screen bg-gray-50 text-gray-800">
+    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-800">
       <Header />
       
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - always visible on desktop, conditionally on mobile */}
-        <div className={`${mobileView === 'sports' ? 'block' : 'hidden'} md:block`}>
+      {/* Mobile View Container */}
+      <div className="md:hidden flex-1 relative">
+        {/* Sidebar - Full width on mobile when active */}
+        <div 
+          className={`${
+            mobileView === 'sports' ? 'translate-x-0' : '-translate-x-full'
+          } fixed inset-0 z-30 w-full h-[calc(100vh-8rem)] bg-white transition-transform duration-300 ease-in-out overflow-y-auto pb-16`}
+        >
           <Sidebar />
         </div>
         
-        {/* Main content - always visible on desktop, conditionally on mobile */}
-        <div className={`${mobileView === 'matches' ? 'block' : 'hidden'} md:block flex-1`}>
+        {/* Main content - Full width on mobile when active */}
+        <div 
+          className={`${
+            mobileView === 'matches' ? 'translate-x-0' : 'translate-x-full'
+          } fixed inset-0 z-20 w-full h-[calc(100vh-8rem)] bg-white transition-transform duration-300 ease-in-out overflow-y-auto pb-16`}
+        >
           {children}
         </div>
         
-        {/* BetSlip - always visible on desktop, conditionally on mobile */}
-        <div className={`${mobileView === 'betslip' ? 'block' : 'hidden'} lg:block`}>
+        {/* BetSlip - Slides up from bottom on mobile when active */}
+        <div 
+          className={`${
+            mobileView === 'betslip' ? 'translate-y-0' : 'translate-y-full'
+          } fixed bottom-16 left-0 right-0 z-40 h-[80vh] bg-white transition-transform duration-300 ease-in-out shadow-lg rounded-t-2xl overflow-y-auto`}
+        >
+          <div className="sticky top-0 w-full h-1 flex justify-center bg-white pt-2">
+            <div className="w-16 h-1 bg-gray-300 rounded-full"></div>
+          </div>
+          <BetSlip />
+        </div>
+      </div>
+      
+      {/* Desktop View Container */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
+        {/* Sidebar - always visible on desktop */}
+        <div className="w-64 flex-shrink-0">
+          <Sidebar />
+        </div>
+        
+        {/* Main content - always visible on desktop */}
+        <div className="flex-1 overflow-y-auto">
+          {children}
+        </div>
+        
+        {/* BetSlip - always visible on desktop */}
+        <div className="w-80 flex-shrink-0">
           <BetSlip />
         </div>
       </div>
       
       {/* Mobile navigation */}
       <MobileNav onSelectView={handleMobileViewChange} activeBets={2} />
-      
-      {/* Padding bottom for mobile to account for the nav bar */}
-      <div className="h-16 md:hidden"></div>
     </div>
   );
 };
