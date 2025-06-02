@@ -225,74 +225,67 @@ const AdminPromotionsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Form Section */}
-      <div className="bg-[#1a1f2c] rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">
+      {/* Add/Edit Promotion Form */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
           {isEditing ? 'Edit Promotion' : 'Add New Promotion'}
         </h2>
-        
+
         {error && (
-          <div className="mb-4 p-3 bg-red-900 bg-opacity-30 border border-red-600 rounded-md text-red-400">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded">
             {error}
           </div>
         )}
-        
         {successMessage && (
-          <div className="mb-4 p-3 bg-green-900 bg-opacity-30 border border-green-600 rounded-md text-green-400">
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-800 rounded">
             {successMessage}
           </div>
         )}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Basic Info */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Promotion Name*
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                placeholder="e.g. Welcome Bonus"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Promotion Code*
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Promo Code</label>
               <div className="flex space-x-2">
                 <input
                   type="text"
                   name="code"
                   value={formData.code}
                   onChange={handleInputChange}
-                  placeholder="e.g. WELCOME100"
+                  className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent uppercase"
                   required
-                  className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white uppercase focus:outline-none focus:ring-1 focus:ring-purple-500"
                 />
                 <button
                   type="button"
                   onClick={generatePromoCode}
-                  className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors text-sm whitespace-nowrap"
+                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
                 >
                   Generate
                 </button>
               </div>
             </div>
-            
+
+            {/* Promotion Type and Value */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Promotion Type
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
               <select
                 name="type"
                 value={formData.type}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="deposit_bonus">Deposit Bonus</option>
                 <option value="free_bet">Free Bet</option>
@@ -300,151 +293,127 @@ const AdminPromotionsPage: React.FC = () => {
                 <option value="cashback">Cashback</option>
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                {formData.type === 'deposit_bonus' ? 'Bonus Percentage (%)' : 
-                 formData.type === 'odds_boost' ? 'Odds Boost (%)' : 
-                 formData.type === 'cashback' ? 'Cashback Percentage (%)' : 
-                 'Bonus Amount ($)'}
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Value (%)</label>
               <input
                 type="number"
                 name="value"
                 value={formData.value}
                 onChange={handleInputChange}
-                step="1"
                 min="0"
+                max="1000"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
               />
             </div>
-            
-            {(formData.type === 'deposit_bonus' || formData.type === 'cashback') && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
-                    Minimum Deposit/Bet Requirement ($)
-                  </label>
-                  <input
-                    type="number"
-                    name="minRequirement"
-                    value={formData.minRequirement}
-                    onChange={handleInputChange}
-                    step="1"
-                    min="0"
-                    className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
-                    Maximum Bonus Amount ($)
-                  </label>
-                  <input
-                    type="number"
-                    name="maxBonus"
-                    value={formData.maxBonus}
-                    onChange={handleInputChange}
-                    step="1"
-                    min="0"
-                    className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  />
-                </div>
-              </>
-            )}
-            
+
+            {/* Requirements and Limits */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Start Date*
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Min Requirement ($)</label>
+              <input
+                type="number"
+                name="minRequirement"
+                value={formData.minRequirement}
+                onChange={handleInputChange}
+                min="0"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Bonus ($)</label>
+              <input
+                type="number"
+                name="maxBonus"
+                value={formData.maxBonus}
+                onChange={handleInputChange}
+                min="0"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Dates */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
               <input
                 type="date"
                 name="startDate"
                 value={formData.startDate}
                 onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                End Date*
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
               <input
                 type="date"
                 name="endDate"
                 value={formData.endDate}
                 onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
               />
             </div>
-            
+
+            {/* Usage Limits */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Usage Limit (per user)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Usage Limit</label>
               <input
                 type="number"
                 name="usageLimit"
                 value={formData.usageLimit}
                 onChange={handleInputChange}
-                step="1"
                 min="0"
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
-            
+
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="isActive"
-                name="isActive"
-                checked={formData.isActive}
-                onChange={handleInputChange}
-                className="w-4 h-4 bg-[#242a38] border border-[#363e52] rounded-sm text-purple-600 focus:ring-purple-500"
-              />
-              <label htmlFor="isActive" className="ml-2 text-sm text-gray-200">
-                Active
+              <label className="relative inline-flex items-center cursor-pointer mt-6">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  checked={formData.isActive}
+                  onChange={handleInputChange}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <span className="ml-3 text-sm font-medium text-gray-700">Active</span>
               </label>
             </div>
           </div>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              Description
-            </label>
+
+          {/* Description and Terms */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleInputChange}
               rows={3}
-              className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-              placeholder="Brief description of the promotion"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
-          
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              Terms and Conditions
-            </label>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Terms and Conditions</label>
             <textarea
               name="termsAndConditions"
               value={formData.termsAndConditions}
               onChange={handleInputChange}
-              rows={5}
-              className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-              placeholder="Terms and conditions for this promotion"
+              rows={4}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               type="button"
               onClick={resetForm}
-              className="px-4 py-2 bg-[#363e52] text-white rounded hover:bg-[#404a62] transition-colors"
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
             >
               Cancel
             </button>
@@ -453,99 +422,97 @@ const AdminPromotionsPage: React.FC = () => {
               disabled={isSaving}
               className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center"
             >
-              {isSaving && (
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+              {isSaving ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                'Save Promotion'
               )}
-              {isEditing ? 'Update Promotion' : 'Add Promotion'}
             </button>
           </div>
         </form>
       </div>
-      
-      {/* Promotions List */}
-      <div className="bg-[#1a1f2c] rounded-lg shadow-md overflow-hidden">
-        <div className="p-4 border-b border-[#363e52]">
-          <h2 className="text-xl font-semibold">Active Promotions</h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Manage all promotional offers
-          </p>
+
+      {/* Existing Promotions */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800">Existing Promotions</h2>
+          <p className="text-sm text-gray-600 mt-1">Manage all promotional offers</p>
         </div>
-        
+
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500"></div>
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
           </div>
         ) : promotions.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-8 text-gray-600">
             No promotions found
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="text-xs text-gray-400 uppercase bg-[#242a38]">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left">Name</th>
-                  <th className="px-6 py-3 text-left">Code</th>
-                  <th className="px-6 py-3 text-left">Type</th>
-                  <th className="px-6 py-3 text-center">Value</th>
-                  <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-left">Validity</th>
-                  <th className="px-6 py-3 text-center">Usage</th>
-                  <th className="px-6 py-3 text-center">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#363e52]">
+              <tbody className="divide-y divide-gray-200 bg-white">
                 {promotions.map((promo) => (
-                  <tr 
-                    key={promo.id} 
-                    className="hover:bg-[#242a38] transition-colors"
-                  >
+                  <tr key={promo.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <div className="font-medium">{promo.name}</div>
+                      <div className="text-sm text-gray-900">{promo.name}</div>
+                      <div className="text-xs text-gray-600">{formatDate(promo.startDate)} - {formatDate(promo.endDate)}</div>
                     </td>
-                    <td className="px-6 py-4 font-mono">
-                      {promo.code}
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-mono bg-gray-100 px-2 py-1 rounded text-gray-800">{promo.code}</div>
                     </td>
-                    <td className="px-6 py-4 capitalize">
-                      {promo.type.replace('_', ' ')}
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-900 capitalize">{promo.type.replace('_', ' ')}</span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      {promo.type === 'free_bet' ? 
-                        `$${promo.value}` : 
-                        `${promo.value}%`
-                      }
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">{promo.value}%</div>
+                      {promo.maxBonus > 0 && (
+                        <div className="text-xs text-gray-600">Max ${promo.maxBonus}</div>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        promo.isActive ? 'bg-green-900 bg-opacity-30 text-green-400' : 'bg-red-900 bg-opacity-30 text-red-400'
+                        promo.isActive
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
                       }`}>
                         {promo.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {formatDate(promo.startDate)} - {formatDate(promo.endDate)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {promo.usageCount} / {promo.usageLimit}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex justify-center space-x-2">
-                        <button
-                          onClick={() => handleEditPromotion(promo)}
-                          className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => promo.id && handleDeletePromotion(promo.id)}
-                          className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                        >
-                          Delete
-                        </button>
+                      <div className="text-sm text-gray-900">
+                        {promo.usageCount} / {promo.usageLimit}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => handleEditPromotion(promo)}
+                        className="text-purple-600 hover:text-purple-900 mx-2"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeletePromotion(promo.id!)}
+                        className="text-red-600 hover:text-red-900 mx-2"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

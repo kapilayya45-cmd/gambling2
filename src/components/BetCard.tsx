@@ -48,12 +48,12 @@ const BetCard: React.FC<BetCardProps> = ({
         </span>
         <span className="text-sm text-gray-500">Bet #{betId.substring(0, 8)}</span>
       </div>
-
+      
       <div className="mb-4">
         <div className="text-gray-500 mb-1">Selection:</div>
         <div className="text-gray-900">{selection}</div>
       </div>
-
+      
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <div className="text-gray-500 mb-1">Odds</div>
@@ -64,7 +64,7 @@ const BetCard: React.FC<BetCardProps> = ({
           <div className="text-gray-900">₹{stake.toLocaleString()}</div>
         </div>
       </div>
-
+      
       <div className="flex justify-between items-center mb-4">
         <div>
           <div className="text-gray-500 mb-1">Potential Win</div>

@@ -143,17 +143,17 @@ const AdminSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="bg-[#1a1f2c] rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-4">Site Settings</h2>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Site Settings</h2>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-900 bg-opacity-30 border border-red-600 rounded-md text-red-400">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded">
           {error}
         </div>
       )}
       
       {successMessage && (
-        <div className="mb-4 p-3 bg-green-900 bg-opacity-30 border border-green-600 rounded-md text-green-400">
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-800 rounded">
           {successMessage}
         </div>
       )}
@@ -161,10 +161,10 @@ const AdminSettingsPage: React.FC = () => {
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
-            <h3 className="text-md font-medium mb-3 border-b border-[#363e52] pb-2">Betting Parameters</h3>
+            <h3 className="text-lg font-medium text-gray-800 mb-4">Betting Parameters</h3>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Minimum Stake
               </label>
               <input
@@ -174,12 +174,12 @@ const AdminSettingsPage: React.FC = () => {
                 onChange={handleInputChange}
                 step="0.01"
                 min="0"
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Maximum Stake
               </label>
               <input
@@ -189,33 +189,33 @@ const AdminSettingsPage: React.FC = () => {
                 onChange={handleInputChange}
                 step="1"
                 min="1"
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Default Odds Format
               </label>
               <select
                 name="defaultOddsFormat"
                 value={settings.defaultOddsFormat}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
-                <option value="decimal">Decimal (1.75)</option>
-                <option value="american">American (+175)</option>
-                <option value="fractional">Fractional (3/4)</option>
+                <option value="decimal">Decimal (1.50)</option>
+                <option value="american">American (+150)</option>
+                <option value="fractional">Fractional (1/2)</option>
               </select>
             </div>
           </div>
           
           <div>
-            <h3 className="text-md font-medium mb-3 border-b border-[#363e52] pb-2">Payment Settings</h3>
+            <h3 className="text-lg font-medium text-gray-800 mb-4">Financial Settings</h3>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Deposit Fee Percentage
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Deposit Fee (%)
               </label>
               <input
                 type="number"
@@ -225,13 +225,13 @@ const AdminSettingsPage: React.FC = () => {
                 step="0.01"
                 min="0"
                 max="100"
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Withdrawal Fee Percentage
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Withdrawal Fee (%)
               </label>
               <input
                 type="number"
@@ -241,12 +241,12 @@ const AdminSettingsPage: React.FC = () => {
                 step="0.01"
                 min="0"
                 max="100"
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Maximum Withdrawal Amount
               </label>
               <input
@@ -255,77 +255,77 @@ const AdminSettingsPage: React.FC = () => {
                 value={settings.maxWithdrawalAmount}
                 onChange={handleInputChange}
                 step="1"
-                min="1"
-                className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                min="0"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
           </div>
         </div>
         
         <div className="mb-6">
-          <h3 className="text-md font-medium mb-3 border-b border-[#363e52] pb-2">Global Toggles</h3>
+          <h3 className="text-lg font-medium text-gray-800 mb-4">System Controls</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="maintenanceMode"
-                name="maintenanceMode"
-                checked={settings.maintenanceMode}
-                onChange={handleInputChange}
-                className="w-4 h-4 bg-[#242a38] border border-[#363e52] rounded-sm text-purple-600 focus:ring-purple-500"
-              />
-              <label htmlFor="maintenanceMode" className="ml-2 text-sm text-gray-200">
-                Maintenance Mode
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="maintenanceMode"
+                  checked={settings.maintenanceMode}
+                  onChange={handleInputChange}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <span className="ml-3 text-sm font-medium text-gray-700">Maintenance Mode</span>
               </label>
             </div>
             
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="allowRegistrations"
-                name="allowRegistrations"
-                checked={settings.allowRegistrations}
-                onChange={handleInputChange}
-                className="w-4 h-4 bg-[#242a38] border border-[#363e52] rounded-sm text-purple-600 focus:ring-purple-500"
-              />
-              <label htmlFor="allowRegistrations" className="ml-2 text-sm text-gray-200">
-                Allow New Registrations
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="allowRegistrations"
+                  checked={settings.allowRegistrations}
+                  onChange={handleInputChange}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <span className="ml-3 text-sm font-medium text-gray-700">Allow Registrations</span>
               </label>
             </div>
             
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="allowDeposits"
-                name="allowDeposits"
-                checked={settings.allowDeposits}
-                onChange={handleInputChange}
-                className="w-4 h-4 bg-[#242a38] border border-[#363e52] rounded-sm text-purple-600 focus:ring-purple-500"
-              />
-              <label htmlFor="allowDeposits" className="ml-2 text-sm text-gray-200">
-                Allow Deposits
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="allowDeposits"
+                  checked={settings.allowDeposits}
+                  onChange={handleInputChange}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <span className="ml-3 text-sm font-medium text-gray-700">Allow Deposits</span>
               </label>
             </div>
             
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="allowWithdrawals"
-                name="allowWithdrawals"
-                checked={settings.allowWithdrawals}
-                onChange={handleInputChange}
-                className="w-4 h-4 bg-[#242a38] border border-[#363e52] rounded-sm text-purple-600 focus:ring-purple-500"
-              />
-              <label htmlFor="allowWithdrawals" className="ml-2 text-sm text-gray-200">
-                Allow Withdrawals
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="allowWithdrawals"
+                  checked={settings.allowWithdrawals}
+                  onChange={handleInputChange}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <span className="ml-3 text-sm font-medium text-gray-700">Allow Withdrawals</span>
               </label>
             </div>
           </div>
         </div>
         
         <div className="mb-6">
-          <h3 className="text-md font-medium mb-3 border-b border-[#363e52] pb-2">Feature Toggles</h3>
+          <h3 className="text-lg font-medium text-gray-800 mb-4">Feature Toggles</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {['liveBetting', 'casino', 'sportsbook', 'promotions', 'referrals', 'chat'].map(feature => (
@@ -345,26 +345,23 @@ const AdminSettingsPage: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex justify-end space-x-3">
-          <button
-            type="button"
-            onClick={fetchSettings}
-            className="px-4 py-2 bg-[#363e52] text-white rounded hover:bg-[#404a62] transition-colors"
-          >
-            Reset Changes
-          </button>
+        <div className="flex justify-end">
           <button
             type="submit"
             disabled={isSaving}
             className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center"
           >
-            {isSaving && (
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+            {isSaving ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </>
+            ) : (
+              'Save Settings'
             )}
-            Save Settings
           </button>
         </div>
       </form>

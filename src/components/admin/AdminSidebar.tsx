@@ -15,8 +15,8 @@ function SidebarItem({ label, active, onClick }: SidebarItemProps) {
       onClick={onClick}
       className={`w-full flex items-center px-6 py-3 text-left transition ${
         active
-          ? 'bg-purple-600 text-white'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'bg-purple-100 text-purple-700 font-medium'
+          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
       }`}
     >
       {label}
@@ -78,7 +78,7 @@ export default function AdminSidebar({ activeSection, onSectionChange }: AdminSi
               onClick={() => onSectionChange('topupadmins')}
             />
             <Link href="/superadmin">
-              <div className={`w-full flex items-center px-6 py-3 text-left transition text-purple-600 hover:bg-gray-100 hover:text-purple-700`}>
+              <div className={`w-full flex items-center px-6 py-3 text-left transition text-purple-600 hover:bg-gray-50 hover:text-purple-700`}>
                 Superadmin Panel
               </div>
             </Link>
@@ -88,7 +88,7 @@ export default function AdminSidebar({ activeSection, onSectionChange }: AdminSi
         <div className="px-4 py-6">
           <button
             onClick={logout}
-            className="w-full py-2 bg-red-600 rounded hover:bg-red-700 text-white"
+            className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
           >
             Logout
           </button>

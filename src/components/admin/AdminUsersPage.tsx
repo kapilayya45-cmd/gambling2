@@ -51,13 +51,13 @@ const EditUserModal: React.FC<EditModalProps> = ({ isOpen, onClose, user, onSave
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-[#1a1f2c] rounded-lg shadow-xl w-full max-w-md p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold">Edit User Balance</h3>
+          <h3 className="text-xl font-semibold text-gray-800">Edit User Balance</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-gray-600"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -66,37 +66,37 @@ const EditUserModal: React.FC<EditModalProps> = ({ isOpen, onClose, user, onSave
         </div>
 
         <div className="mb-4">
-          <p className="text-gray-400 mb-2">User: <span className="text-white">{user?.email}</span></p>
+          <p className="text-gray-600 mb-2">User: <span className="text-gray-900 font-medium">{user?.email}</span></p>
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-400 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Coin Balance
           </label>
           <input
             type="number"
             value={coinBalance}
             onChange={(e) => setCoinBalance(Number(e.target.value))}
-            className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           />
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-400 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Real Money Balance
           </label>
           <input
             type="number"
             value={realBalance}
             onChange={(e) => setRealBalance(Number(e.target.value))}
-            className="w-full px-3 py-2 bg-[#242a38] border border-[#363e52] rounded-md text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           />
         </div>
 
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-[#363e52] text-white rounded hover:bg-[#404a62] transition-colors"
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
           >
             Cancel
           </button>
@@ -206,21 +206,21 @@ const AdminUsersPage: React.FC = () => {
 
   // Pagination controls
   const PaginationControls = () => (
-    <div className="flex items-center justify-between px-6 py-4 border-t border-[#363e52]">
+    <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
       <div>
-        <p className="text-sm text-gray-400">
-          Showing <span className="font-medium text-white">{indexOfFirstUser + 1}</span> to{' '}
-          <span className="font-medium text-white">
+        <p className="text-sm text-gray-600">
+          Showing <span className="font-medium text-gray-800">{indexOfFirstUser + 1}</span> to{' '}
+          <span className="font-medium text-gray-800">
             {Math.min(indexOfLastUser, filteredUsers.length)}
           </span>{' '}
-          of <span className="font-medium text-white">{filteredUsers.length}</span> users
+          of <span className="font-medium text-gray-800">{filteredUsers.length}</span> users
         </p>
       </div>
       <div className="flex space-x-1">
         <button
           onClick={() => goToPage(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-3 py-1 bg-[#242a38] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-1 bg-white border border-gray-300 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
         >
           Previous
         </button>
@@ -244,7 +244,7 @@ const AdminUsersPage: React.FC = () => {
               className={`px-3 py-1 rounded ${
                 currentPage === pageToShow
                   ? 'bg-purple-600 text-white'
-                  : 'bg-[#242a38] text-white hover:bg-[#363e52]'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
               {pageToShow}
@@ -254,7 +254,7 @@ const AdminUsersPage: React.FC = () => {
         <button
           onClick={() => goToPage(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-3 py-1 bg-[#242a38] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-1 bg-white border border-gray-300 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
         >
           Next
         </button>
@@ -263,17 +263,17 @@ const AdminUsersPage: React.FC = () => {
   );
 
   return (
-    <div className="bg-[#1a1f2c] rounded-lg shadow-md overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Header with search and load all toggle */}
-      <div className="p-4 border-b border-[#363e52] flex flex-col md:flex-row justify-between md:items-center space-y-2 md:space-y-0">
-        <h2 className="text-xl font-semibold">User Management</h2>
+      <div className="p-4 border-b border-gray-200 flex flex-col md:flex-row justify-between md:items-center space-y-2 md:space-y-0">
+        <h2 className="text-xl font-semibold text-gray-800">User Management</h2>
         <div className="flex flex-col md:flex-row gap-3">
           {!loadAll && !searchTerm && (
-            <div className="text-xs text-gray-400 md:self-center">
+            <div className="text-xs text-gray-600 md:self-center">
               Showing first 50 users - {' '}
               <button 
                 onClick={() => setLoadAll(true)}
-                className="text-purple-400 hover:text-purple-300"
+                className="text-purple-600 hover:text-purple-700"
               >
                 Load all users
               </button>
@@ -285,7 +285,7 @@ const AdminUsersPage: React.FC = () => {
               placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-4 py-2 pr-10 bg-[#242a38] border border-[#363e52] rounded-md text-white w-full md:w-64 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="px-4 py-2 pr-10 bg-white border border-gray-300 rounded text-gray-900 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
             <div className="absolute right-3 top-2.5 text-gray-400">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -302,64 +302,64 @@ const AdminUsersPage: React.FC = () => {
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500"></div>
         </div>
       ) : filteredUsers.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-gray-600">
           {searchTerm ? 'No users found matching your search' : 'No users found'}
         </div>
       ) : (
         <>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="text-xs text-gray-400 uppercase bg-[#242a38]">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left">Email</th>
-                  <th className="px-6 py-3 text-left">Display Name</th>
-                  <th className="px-6 py-3 text-left">Role</th>
-                  <th className="px-6 py-3 text-left">Coin Balance</th>
-                  <th className="px-6 py-3 text-left">Real Balance</th>
-                  <th className="px-6 py-3 text-left">Signup Date</th>
-                  <th className="px-6 py-3 text-center">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Display Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coin Balance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Real Balance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signup Date</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#363e52]">
+              <tbody className="divide-y divide-gray-200 bg-white">
                 {currentUsers.map((user) => (
                   <tr 
                     key={user.id} 
-                    className="hover:bg-[#242a38] transition-colors"
+                    className="hover:bg-gray-50"
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {user.email || 'No email'}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {user.displayName || 'Anonymous'}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         user.role === 'admin' 
-                          ? 'bg-purple-900 bg-opacity-30 text-purple-400' 
-                          : 'bg-blue-900 bg-opacity-30 text-blue-400'
+                          ? 'bg-purple-100 text-purple-800' 
+                          : 'bg-blue-100 text-blue-800'
                       }`}>
                         {user.role || 'user'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {typeof user.coinBalance === 'number' 
                         ? user.coinBalance.toLocaleString()
                         : '0'
                       }
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       ${typeof user.realBalance === 'number' 
                         ? user.realBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})
                         : '0.00'
                       }
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-sm text-gray-600">
                       {formatDate(user.createdAt)}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => handleEditUser(user)}
-                        className="text-purple-400 hover:text-purple-300 focus:outline-none"
+                        className="text-purple-600 hover:text-purple-900 focus:outline-none"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>

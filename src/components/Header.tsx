@@ -99,13 +99,13 @@ const Header: React.FC<HeaderProps> = ({ onAdd }) => {
         ) : (
           <div className="flex space-x-2">
             <Button
-              className="bg-transparent border border-gray-200 hover:bg-gray-100 text-gray-800 text-sm px-3 py-1.5"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm px-4 py-2 font-medium border border-gray-300 shadow-sm"
               onClick={() => setIsLoginModalOpen(true)}
             >
               Login
             </Button>
             <Button
-              className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-1.5"
+              className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 font-medium shadow-sm"
               onClick={() => setIsSignupModalOpen(true)}
             >
               Sign Up

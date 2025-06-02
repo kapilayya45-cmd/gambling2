@@ -1,14 +1,19 @@
-import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/router'
-import { useEffect, useState, FormEvent, useCallback } from 'react'
-import Head from 'next/head'
-import { collection, query, where, getDocs, runTransaction, doc, increment, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, setDoc, getDoc } from 'firebase/firestore'
-import { db } from '@/firebase/config'
-import { deployCoins } from '@/services/coinService'
-import Sidebar from '@/components/Sidebar'
-import Link from 'next/link'
-import { auth } from '@/firebase/config'
-import { getIdToken } from 'firebase/auth'
+import React, { useState, useEffect } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import { useAuth } from '@/contexts/AuthContext';
+import { collection, query, where, getDocs, runTransaction, doc, increment, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+import { deployCoins } from '@/services/coinService';
+import Sidebar from '@/components/Sidebar';
+import Link from 'next/link';
+import { auth } from '@/firebase/config';
+import { getIdToken } from 'firebase/auth';
+import SuperadminSidebarItems from '@/components/superadmin/SuperadminSidebarItems';
+import UsersList from '@/components/superadmin/UsersList';
+import TopUpAdminsForm from '@/components/superadmin/TopUpAdminsForm';
+import AdminsList from '@/components/superadmin/AdminsList';
+import TransactionLogs from '@/components/superadmin/TransactionLogs';
 
 // Add this function to help debug permission issues
 async function verifyUserPermissions(uid: string): Promise<{role: string, isSuperadmin: boolean, userData: any}> {
@@ -467,103 +472,102 @@ export default function SuperadminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Head>
-        <title>Superadmin Dashboard | Foxxy</title>
-      </Head>
-
-      <div className="flex">
-        <Sidebar />
-        
-        <div className="flex-1 p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Superadmin Dashboard</h1>
-            <button 
-              onClick={() => router.push('/')}
-              className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700"
-            >
-              Return to Home
-            </button>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 hidden md:block">
+        <div className="px-4 py-5 border-b border-gray-200">
+          <h1 className="text-xl font-bold text-gray-800">Foxxy</h1>
+          <div className="mt-2 flex items-center">
+            <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+            <span className="text-sm text-gray-600">
+              {currentUser?.email || 'Superadmin'}
+            </span>
           </div>
-          
-          {/* Tabs */}
-          <div className="mb-6 border-b border-gray-200">
-            <nav className="flex -mb-px">
-              <button
-                onClick={() => setActiveTab('topup')}
-                className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                  activeTab === 'topup'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Top Up Admins
-              </button>
-              <button
-                onClick={() => setActiveTab('transactions')}
-                className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                  activeTab === 'transactions'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Transaction History
-              </button>
-            </nav>
-          </div>
-          
-          {/* Tab Content */}
-          {activeTab === 'topup' && (
-            <div className="bg-white shadow-md rounded-lg p-6">
-              <h2 className="text-lg font-medium mb-4">Deploy Coins to Admins</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-1">
-                  <h3 className="text-md font-medium mb-3">Select an Admin</h3>
-                  <div className="max-h-96 overflow-y-auto border rounded-md">
-                    {admins.map(admin => (
-                      <div 
-                        key={admin.id}
-                        onClick={() => handleSelectAdmin(admin.id)}
-                        className={`p-3 border-b cursor-pointer ${
-                          selectedAdmin === admin.id ? 'bg-blue-50' : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="font-medium">{admin.email}</div>
-                        <div className="text-sm text-gray-600">Balance: {admin.coinBalance} coins</div>
-                      </div>
-                    ))}
-                    {admins.length === 0 && (
-                      <div className="p-4 text-gray-500 text-center">No admin accounts found.</div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <h3 className="text-md font-medium mb-3">Top Up Selected Admin</h3>
-                  {selectedAdmin ? (
-                    <TopUpAdminsForm 
-                      onSelectAdmin={handleSelectAdmin}
-                      selectedAdmin={selectedAdmin}
-                      admins={admins}
-                    />
-                  ) : (
-                    <div className="p-4 border rounded-md bg-gray-50 text-center text-gray-500">
-                      Please select an admin from the list to deploy coins.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {activeTab === 'transactions' && (
-            <div className="bg-white shadow-md rounded-lg p-6">
-              <h2 className="text-lg font-medium mb-4">Transaction History</h2>
-              <TransactionLogs />
-            </div>
-          )}
         </div>
+        
+        <SuperadminSidebarItems />
+        
+        <div className="px-4 py-8">
+          <button 
+            onClick={() => router.push('/')}
+            className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded font-medium transition-colors flex items-center justify-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            Back to Home
+          </button>
+        </div>
+      </div>
+      
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white px-4 py-3 shadow-lg border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-xl font-bold flex items-center text-gray-800">
+            <svg className="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            Superadmin Dashboard
+          </h2>
+          
+          <div className="flex items-center space-x-4">
+            <a 
+              href="/admin" 
+              className="flex items-center px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm transition-colors text-gray-700"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+              </svg>
+              Admin Panel
+            </a>
+            
+            <a 
+              href="/" 
+              className="flex items-center px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm transition-colors text-gray-700"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+              </svg>
+              Home
+            </a>
+          </div>
+        </header>
+        
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+          <Head>
+            <title>Superadmin Dashboard | Foxxy</title>
+            <meta name="description" content="Superadmin control panel" />
+          </Head>
+          
+          {/* Two-column layout for desktop, stacked on mobile */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left column: Top-Up Form */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <TopUpAdminsForm 
+                onSelectAdmin={handleSelectAdmin} 
+                selectedAdmin={selectedAdmin}
+                admins={admins}
+              />
+            </div>
+            
+            {/* Right column: Admins List */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <AdminsList onSelectAdmin={handleSelectAdmin} />
+            </div>
+          </div>
+          
+          {/* Users List */}
+          <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <UsersList />
+          </div>
+          
+          {/* Transaction Logs */}
+          <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <TransactionLogs />
+          </div>
+        </main>
       </div>
     </div>
   );

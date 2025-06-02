@@ -95,20 +95,20 @@ export default function AdminDeployCoins() {
   };
 
   return (
-    <div className="p-6 bg-[#1a1f2c] rounded-lg text-white">
-      <h3 className="text-xl mb-4">Deploy Coins</h3>
+    <div className="p-6 bg-white rounded-lg text-gray-800 border border-gray-200 shadow-sm">
+      <h3 className="text-xl mb-4 font-semibold">Deploy Coins</h3>
 
       {/* show the same balance everywhere */}
-      <div className="mb-4 p-3 bg-gray-800 rounded">
-        Your coins: <span className="font-bold text-yellow-400">{adminCoins}</span>
+      <div className="mb-4 p-3 bg-gray-50 rounded border border-gray-200">
+        Your coins: <span className="font-bold text-yellow-600">{adminCoins}</span>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-gray-300 mb-1">Recipient Email</label>
+          <label className="block text-gray-700 mb-1">Recipient Email</label>
           <input
             type="email"
-            className="w-full p-2 bg-gray-700 rounded text-white placeholder-gray-400"
+            className="w-full p-2 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="user@example.com"
             value={email}
             onChange={e => setEmail(e.target.value)}
@@ -117,12 +117,12 @@ export default function AdminDeployCoins() {
         </div>
 
         <div>
-          <label className="block text-gray-300 mb-1">Amount</label>
+          <label className="block text-gray-700 mb-1">Amount</label>
           <input
             type="number"
             min={1}
             max={getMaxAmount(adminCoins)}
-            className="w-full p-2 bg-gray-700 rounded text-white placeholder-gray-400"
+            className="w-full p-2 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             value={amount}
             onChange={e => setAmount(Number(e.target.value))}
             required
@@ -132,13 +132,13 @@ export default function AdminDeployCoins() {
         <button
           type="submit"
           disabled={status.loading || amount < 1 || exceedsBalance(amount, adminCoins)}
-          className="w-full py-2 bg-green-600 rounded hover:bg-green-700 disabled:opacity-50"
+          className="w-full py-2 bg-green-600 rounded hover:bg-green-700 disabled:opacity-50 text-white transition-colors"
         >
-          {status.loading ? "⏳ Deploying…" : "Deploy Coins"}
+          {status.loading ? "⏳ Deploying..." : "Deploy Coins"}
         </button>
 
-        {status.error   && <p className="mt-2 text-red-400">{status.error}</p>}
-        {status.success && <p className="mt-2 text-green-400">{status.success}</p>}
+        {status.error   && <p className="mt-2 text-red-600">{status.error}</p>}
+        {status.success && <p className="mt-2 text-green-600">{status.success}</p>}
       </form>
     </div>
   );

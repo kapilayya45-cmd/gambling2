@@ -48,7 +48,15 @@ export default function Home() {
       </Head>
 
       {/* Background */}
-      <div className="absolute inset-0 z-0 bg-home-bg bg-cover bg-center brightness-40" />
+      <div 
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: "url('/images/home-bg.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'brightness(0.4)'
+        }}
+      />
 
       {/* Page Content */}
       <div className="relative z-10 flex flex-col min-h-screen">

@@ -48,7 +48,7 @@ export const CoinsProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       });
       
       // Update local state
-      setCoinsBalance(newBalance);
+    setCoinsBalance(newBalance);
     } catch (error) {
       console.error('Error updating coin balance:', error);
       throw error;
