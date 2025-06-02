@@ -12,6 +12,7 @@ import { Inter } from 'next/font/google';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { CoinsProvider } from '@/contexts/CoinsContext';
+import Head from 'next/head';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -33,6 +34,9 @@ function AppContent({ children }: { children: ReactNode }) {
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+      </Head>
       <AuthProvider>
         <WalletProvider>
           <CoinsProvider>

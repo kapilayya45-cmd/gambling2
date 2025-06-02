@@ -24,3 +24,77 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+/* Responsive Layout Fixes */
+@layer utilities {
+  .responsive-container {
+    @apply w-full px-4 md:px-6;
+  }
+
+  .sidebar-container {
+    @apply fixed md:relative w-full md:w-64 h-[calc(100vh-4rem)] md:h-auto z-40 bg-white dark:bg-gray-900 transition-transform duration-300;
+  }
+
+  .main-content {
+    @apply flex-1 overflow-y-auto min-h-screen w-full md:w-auto;
+  }
+
+  .betting-slip {
+    @apply fixed md:relative bottom-16 md:bottom-auto left-0 md:left-auto right-0 md:right-auto w-full md:w-80 bg-white dark:bg-gray-900 z-30;
+  }
+
+  .mobile-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 md:hidden z-50;
+  }
+
+  /* Touch-friendly buttons */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px] p-3;
+  }
+
+  /* Responsive text */
+  .responsive-text {
+    @apply text-sm md:text-base;
+  }
+
+  .responsive-heading {
+    @apply text-lg md:text-xl font-semibold;
+  }
+
+  /* Card layouts */
+  .responsive-card {
+    @apply w-full md:w-auto rounded-lg shadow-sm;
+  }
+
+  /* Grid layouts */
+  .responsive-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
+  }
+
+  /* Table layouts */
+  .responsive-table {
+    @apply overflow-x-auto -mx-4 md:mx-0;
+  }
+
+  .responsive-table table {
+    @apply min-w-full;
+  }
+
+  /* Form elements */
+  .responsive-form {
+    @apply space-y-4 w-full max-w-md mx-auto;
+  }
+
+  .responsive-input {
+    @apply w-full px-4 py-2 rounded-lg;
+  }
+
+  /* Modal/Dialog */
+  .responsive-modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+  }
+
+  .responsive-modal-content {
+    @apply w-full max-w-md mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-xl;
+  }
+}
