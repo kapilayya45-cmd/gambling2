@@ -14,6 +14,10 @@ export const BettingLayout: React.FC<BettingLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const handleMobileViewChange = (view: 'matches' | 'sports' | 'betslip') => {
+    if (view === 'sports') {
+      // Don't automatically show sidebar when sports tab is clicked
+      return;
+    }
     setMobileView(view);
   };
 
@@ -27,7 +31,7 @@ export const BettingLayout: React.FC<BettingLayoutProps> = ({ children }) => {
       
       {/* Mobile View Container */}
       <div className="md:hidden flex-1 relative">
-        {/* Sidebar - Slides in from left when menu is clicked */}
+        {/* Sidebar - Only shown when toggled via 3-dots menu */}
         <div 
           className={`${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -49,7 +53,7 @@ export const BettingLayout: React.FC<BettingLayoutProps> = ({ children }) => {
           {children}
         </div>
         
-        {/* BetSlip - Slides up from bottom on mobile when active */}
+        {/* BetSlip - Slides up from bottom when active */}
         <div 
           className={`${
             mobileView === 'betslip' ? 'translate-y-0' : 'translate-y-full'

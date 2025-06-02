@@ -12,6 +12,10 @@ const MobileNav: React.FC<MobileNavProps> = ({ onSelectView, activeBets }) => {
   const { isAdmin } = useAdmin();
   
   const handleTabClick = (tab: 'matches' | 'sports' | 'betslip') => {
+    if (tab === 'sports') {
+      // Don't change active tab for sports, it's handled by the 3-dots menu
+      return;
+    }
     setActiveTab(tab);
     onSelectView(tab);
   };
