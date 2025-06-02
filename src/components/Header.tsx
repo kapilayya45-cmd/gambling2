@@ -11,13 +11,14 @@ import RegistrationModal from './RegistrationModal';
 import UserProfile from './UserProfile';
 import Logo from './Logo';
 import Link from 'next/link';
-import { Plus, Menu, X } from 'lucide-react';
+import { Plus, Menu, X, MoreVertical } from 'lucide-react';
 
 interface HeaderProps {
   onAdd?: () => void;
+  onMenuClick?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onAdd }) => {
+const Header: React.FC<HeaderProps> = ({ onAdd, onMenuClick }) => {
   const { 
     currentUser, 
     isAdmin, 
@@ -44,6 +45,14 @@ const Header: React.FC<HeaderProps> = ({ onAdd }) => {
       <header className="bg-white px-4 py-3 flex justify-between items-center shadow-lg border-b border-gray-200 relative z-50">
         {/* ───── Left ───── */}
         <div className="flex items-center space-x-4">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={onMenuClick}
+            className="md:hidden p-2 -ml-2 rounded-lg hover:bg-gray-100"
+          >
+            <MoreVertical className="w-6 h-6 text-gray-600" />
+          </button>
+
           <Logo className="w-10 h-10 md:w-14 md:h-14 relative" />
           <h1 className="text-lg md:text-xl font-bold text-gray-800 tracking-tight">Foxxy</h1>
 

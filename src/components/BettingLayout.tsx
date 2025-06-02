@@ -11,32 +11,41 @@ interface BettingLayoutProps {
 
 export const BettingLayout: React.FC<BettingLayoutProps> = ({ children }) => {
   const [mobileView, setMobileView] = useState<'matches' | 'sports' | 'betslip'>('matches');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const handleMobileViewChange = (view: 'matches' | 'sports' | 'betslip') => {
     setMobileView(view);
   };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 text-gray-800">
-      <Header />
+      <Header onMenuClick={toggleSidebar} />
       
       {/* Mobile View Container */}
       <div className="md:hidden flex-1 relative">
-        {/* Sidebar - Full width on mobile when active */}
+        {/* Sidebar - Slides in from left when menu is clicked */}
         <div 
           className={`${
-            mobileView === 'sports' ? 'translate-x-0' : '-translate-x-full'
-          } fixed inset-0 z-30 w-full h-[calc(100vh-8rem)] bg-white transition-transform duration-300 ease-in-out overflow-y-auto pb-16`}
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } fixed inset-0 z-50 w-[80%] h-[calc(100vh-4rem)] bg-white transition-transform duration-300 ease-in-out overflow-y-auto pb-16 shadow-lg`}
         >
           <Sidebar />
         </div>
+
+        {/* Overlay - Only visible when sidebar is open */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 z-40 bg-black bg-opacity-50 transition-opacity duration-300"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
         
-        {/* Main content - Full width on mobile when active */}
-        <div 
-          className={`${
-            mobileView === 'matches' ? 'translate-x-0' : 'translate-x-full'
-          } fixed inset-0 z-20 w-full h-[calc(100vh-8rem)] bg-white transition-transform duration-300 ease-in-out overflow-y-auto pb-16`}
-        >
+        {/* Main content - Always visible on mobile */}
+        <div className="relative z-20 h-[calc(100vh-8rem)] bg-white overflow-y-auto pb-16">
           {children}
         </div>
         
