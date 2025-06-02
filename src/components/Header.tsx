@@ -169,11 +169,11 @@ const Header: React.FC<HeaderProps> = ({ onAdd, onMenuClick }) => {
               </div>
               
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <CoinBalance />
+                <CoinBalance className="w-full flex justify-between" />
               </div>
               
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <Balance />
+                <Balance className="w-full flex justify-between" />
               </div>
 
               {(isAdmin || isSuperadmin) && (
