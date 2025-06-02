@@ -56,7 +56,7 @@ export const BettingLayout: React.FC<BettingLayoutProps> = ({ children }) => {
       {/* Desktop View Container */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Sidebar - always visible on desktop */}
-        <div className="w-64 flex-shrink-0">
+        <div className="w-64 flex-shrink-0 border-r border-gray-200">
           <Sidebar />
         </div>
         

@@ -247,29 +247,22 @@ const Sidebar: React.FC = () => {
   const { currentUser } = useAuth();
   const { status: entitySportsStatus } = useLeagueStatus();
   const basketballStatus = useBasketballStatus();
+  const [expandedSport, setExpandedSport] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // State for tracking sports section open/closed
-  const [isSportsOpen, setIsSportsOpen] = useState(false);
-  // State for tracking cricket section open/closed
-  const [isCricketOpen, setIsCricketOpen] = useState(false);
-  // State for tracking IPL section open/closed
-  const [isIPLOpen, setIsIPLOpen] = useState(false);
-  // State for tracking football section open/closed
-  const [isFootballOpen, setIsFootballOpen] = useState(false);
-  // State for tracking basketball section open/closed
-  const [isBasketballOpen, setIsBasketballOpen] = useState(false);
-  // State for tracking tennis section open/closed
-  const [isTennisOpen, setIsTennisOpen] = useState(false);
-  // State for tracking horse racing section open/closed
-  const [isHorseOpen, setIsHorseOpen] = useState(false);
-  // State for tracking greyhound racing section open/closed
-  const [isGreyhoundOpen, setIsGreyhoundOpen] = useState(false);
-  
-  // State for Cricket matches
-  const [cricketMatches, setCricketMatches] = useState<string[]>([]);
-  
-  // Legacy status for backward compatibility
-  const [legacyLeagueStatus, setLegacyLeagueStatus] = useState<LegacyLeagueStatus>({});
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const toggleSport = (sportId: string) => {
+    setExpandedSport(expandedSport === sportId ? null : sportId);
+  };
 
   // Load upcoming cricket matches
   useEffect(() => {
@@ -519,508 +512,130 @@ const Sidebar: React.FC = () => {
     router.push('/');
   }, [router]);
 
-  // Toggle sports section
-  const toggleSportsSection = useCallback(() => {
-    setIsSportsOpen(prev => !prev);
-  }, []);
-
-  // Helper function to toggle the cricket section
-  const toggleCricketOpen = useCallback(() => {
-    setIsCricketOpen(prev => !prev);
-  }, []);
-
-  // Toggle IPL section
-  const toggleIPLOpen = useCallback(() => {
-    setIsIPLOpen(prev => !prev);
-  }, []);
+  // State for Cricket matches
+  const [cricketMatches, setCricketMatches] = useState<string[]>([]);
+  
+  // Legacy status for backward compatibility
+  const [legacyLeagueStatus, setLegacyLeagueStatus] = useState<LegacyLeagueStatus>({});
 
   return (
-    <aside className="w-60 min-w-[240px] bg-white h-full overflow-y-auto hidden md:block shadow-lg">
-      {/* User Profile Area */}
-      <div
-        className="flex items-center px-4 py-5 border-b border-gray-200 hover:bg-gray-100 cursor-pointer"
-        onClick={handleProfileClick}
-      >
-        {currentUser ? (
-          <>
-            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
-              {userInitial}
-            </div>
-            <div className="ml-3 overflow-hidden">
-              <p className="text-gray-800 font-medium truncate max-w-[160px]">
-                {userDisplayName}
-              </p>
-              {currentUser.email && userDisplayName !== currentUser.email && (
-                <p className="text-xs text-gray-500 truncate max-w-[160px]">
-                  {currentUser.email}
-                </p>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 5C27 5 33 11 33 20C33 29 27 35 20 35C13 35 7 29 7 20C7 11 13 5 20 5Z" fill="#f5f5f5" fillOpacity="0.7" stroke="#8A2BE2" strokeWidth="1.5" />
-              <path d="M20 10C25 10 29 14 29 19C29 24 25 28 20 28" stroke="#FF00FF" strokeWidth="1.5" />
-              <path d="M20 10C15 10 11 14 11 19C11 24 15 28 20 28" stroke="#FF69B4" strokeWidth="1.5" />
-              <path d="M14 16L16 18L18 16M22 16L24 18L26 16" stroke="#FF00FF" strokeWidth="1.5" />
-              <path d="M16 20C18 22 22 22 24 20" stroke="#FF69B4" strokeWidth="1.5" />
-              <rect x="10" y="14" width="4" height="6" rx="1" fill="#f8f8f8" stroke="#FF69B4" strokeWidth="0.5" />
-              <rect x="26" y="14" width="4" height="6" rx="1" fill="#f8f8f8" stroke="#FF00FF" strokeWidth="0.5" />
-            </svg>
-            <span className="ml-2 text-2xl font-bold text-gray-800">Foxxy</span>
-          </>
-        )}
+    <div className="h-full flex flex-col bg-white">
+      {/* Mobile Header - Only visible on mobile */}
+      <div className="md:hidden px-4 py-3 border-b border-gray-200 bg-gray-50">
+        <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
       </div>
 
-      {/* Main Navigation */}
-      <nav className="px-4 py-6 space-y-4">
-        {/* My Feed */}
-        <Link
-          href="/feed"
-          prefetch={true}
-          passHref
-          legacyBehavior
-        >
-          <a 
-            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-              activeItem === 'feed'
-                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-            }`}
-          >
-            <div
-              className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                activeItem === 'feed' ? 'bg-purple-200' : 'bg-gray-200'
+      {/* Navigation Items */}
+      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+        {/* Main Navigation Items */}
+        <div className="space-y-1">
+          {navigationItems.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                router.pathname === item.href
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <FeedIcon />
-            </div>
-            <span className="font-medium">My Feed</span>
-          </a>
-        </Link>
-
-        {/* Sports (Collapsible) */}
-        <div>
-          <div 
-            className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-              isSportActive
-                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-            }`}
-            onClick={toggleSportsSection}
-          >
-            <div
-              className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                isSportActive ? 'bg-purple-200' : 'bg-gray-200'
-              }`}
-            >
-              <SportsIcon />
-            </div>
-            <span className="font-medium">Sports</span>
-            <div className={`ml-auto transform transition-transform duration-200 ${isSportsOpen ? 'rotate-90' : ''}`}>
-              <ChevronIcon />
-            </div>
-          </div>
-
-          {/* Sports Categories (Conditionally Rendered) */}
-          {isSportsOpen && (
-            <div className="mt-1 ml-6 space-y-1">
-              {/* Cricket with two-level nesting (Cricket > IPL > Matches) */}
-              <div>
-                <div
-                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    activeItem === 'cricket'
-                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                  }`}
-                  onClick={toggleCricketOpen}
-                >
-                  <div
-                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'cricket' ? 'bg-purple-200' : 'bg-gray-200'
-                    }`}
-                  >
-                    <CricketIcon />
-                  </div>
-                  <span className="font-medium text-sm">Cricket</span>
-                  <div className={`ml-auto transform transition-transform duration-200 ${isCricketOpen ? 'rotate-90' : ''}`}>
-                    <ChevronIcon />
-                  </div>
-                </div>
-
-                {/* Cricket Sub-Menu */}
-                {isCricketOpen && (
-                  <ul className="pl-4 space-y-1 mt-1">
-                    {/* IPL Sub-Header */}
-                    <li>
-                      <div
-                        className="flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-                        onClick={toggleIPLOpen}
-                      >
-                        <span className="font-medium text-sm">IPL</span>
-                        <div className={`ml-auto transform transition-transform duration-200 ${isIPLOpen ? 'rotate-90' : ''}`}>
-                          <ChevronIcon />
-                        </div>
-                      </div>
-                      
-                      {/* IPL Matches */}
-                      {isIPLOpen && (
-                        <ul className="pl-6 space-y-1 mt-1">
-                          {/* All IPL Matches Link */}
-                          <li className="flex items-center px-3 py-2 rounded hover:bg-gray-100">
-                            <Link href="/cricket/ipl/bet" legacyBehavior>
-                              <a className="flex-1 text-gray-600 hover:text-gray-800 text-sm">
-                                All IPL Matches
-                              </a>
-                            </Link>
-                          </li>
-                          
-                          {/* Dynamic cricket match links */}
-                          {cricketMatches.map((match, index) => {
-                            // Extract team names from "Team A vs Team B" format
-                            const teams = match.split(' vs ');
-                            if (teams.length !== 2) return null;
-                            
-                            const teamA = teams[0].trim();
-                            const teamB = teams[1].trim();
-                            
-                            // Create URL-friendly team names for the query parameter
-                            const teamASlug = slugify(teamA);
-                            
-                            return (
-                              <li key={index} className="flex items-center px-3 py-2 rounded hover:bg-gray-100">
-                                <Link href={`/cricket/ipl/bet?team=${teamASlug}`} legacyBehavior>
-                                  <a className="flex-1 text-gray-600 hover:text-gray-800 text-sm">
-                                    {match}
-                                  </a>
-                                </Link>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </li>
-                    
-                    {/* Other Cricket Leagues - Excluding IPL */}
-                    {CRICKET_LEAGUES.filter(league => league.id !== 1).map(renderCricketLeague)}
-                  </ul>
-                )}
-              </div>
-
-              {/* Football with collapsible sub-menu */}
-              <div>
-                <div
-                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    activeItem === 'football'
-                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                  }`}
-                  onClick={() => setIsFootballOpen(!isFootballOpen)}
-                >
-                  <div
-                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'football' ? 'bg-purple-200' : 'bg-gray-200'
-                    }`}
-                  >
-                    <FootballIcon />
-                  </div>
-                  <span className="font-medium text-sm">Football</span>
-                  <div className={`ml-auto transform transition-transform duration-200 ${isFootballOpen ? 'rotate-90' : ''}`}>
-                    <ChevronIcon />
-                  </div>
-                </div>
-
-                {/* Football Leagues Sub-List */}
-                {isFootballOpen && (
-                  <ul className="pl-8 space-y-1 mt-1">
-                    {FOOTBALL_LEAGUES.map(renderFootballLeague)}
-                  </ul>
-                )}
-              </div>
-
-              {/* Basketball with collapsible sub-menu */}
-              <div>
-                <div
-                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    activeItem === 'basketball'
-                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                  }`}
-                  onClick={() => setIsBasketballOpen(!isBasketballOpen)}
-                >
-                  <div
-                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'basketball' ? 'bg-purple-200' : 'bg-gray-200'
-                    }`}
-                  >
-                    <BasketballIcon />
-                  </div>
-                  <span className="font-medium text-sm">Basketball</span>
-                  <div className={`ml-auto transform transition-transform duration-200 ${isBasketballOpen ? 'rotate-90' : ''}`}>
-                    <ChevronIcon />
-                  </div>
-                </div>
-
-                {/* Basketball Leagues Sub-List */}
-                {isBasketballOpen && (
-                  <ul className="pl-8 space-y-1 mt-1">
-                    {NEW_BASKETBALL_LEAGUES.map(renderBasketballLeague)}
-                  </ul>
-                )}
-              </div>
-
-              {/* Tennis with collapsible sub-menu */}
-              <div>
-                <div
-                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    activeItem === 'tennis'
-                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                  }`}
-                  onClick={() => setIsTennisOpen(!isTennisOpen)}
-                >
-                  <div
-                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'tennis' ? 'bg-purple-200' : 'bg-gray-200'
-                    }`}
-                  >
-                    <TennisIcon />
-                  </div>
-                  <span className="font-medium text-sm">Tennis</span>
-                  <div className={`ml-auto transform transition-transform duration-200 ${isTennisOpen ? 'rotate-90' : ''}`}>
-                    <ChevronIcon />
-                  </div>
-                </div>
-
-                {/* Tennis Leagues Sub-List */}
-                {isTennisOpen && (
-                  <ul className="pl-8 space-y-1 mt-1">
-                    {renderLeagueLink('tennis', 'atp-tour', 'ATP Tour')}
-                    {renderLeagueLink('tennis', 'wta-tour', 'WTA Tour')}
-                    {renderLeagueLink('tennis', 'davis-cup', 'Davis Cup')}
-                    {renderLeagueLink('tennis', 'fed-cup', 'Billie Jean King Cup')}
-                    {renderLeagueLink('tennis', 'grand-slams', 'Grand Slams')}
-                    {renderLeagueLink('tennis', 'atp-masters', 'ATP Masters')}
-                    {renderLeagueLink('tennis', 'exhibition-matches', 'Exhibition Matches')}
-                  </ul>
-                )}
-              </div>
-
-              {/* Horse Racing with collapsible sub-menu */}
-              <div>
-                <div
-                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    activeItem === 'horse-racing'
-                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                  }`}
-                  onClick={() => setIsHorseOpen(!isHorseOpen)}
-                >
-                  <div
-                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'horse-racing' ? 'bg-purple-200' : 'bg-gray-200'
-                    }`}
-                  >
-                    <HorseRacingIcon />
-                  </div>
-                  <span className="font-medium text-sm">Horse Racing</span>
-                  <div className={`ml-auto transform transition-transform duration-200 ${isHorseOpen ? 'rotate-90' : ''}`}>
-                    <ChevronIcon />
-                  </div>
-                </div>
-
-                {/* Horse Racing Countries Sub-List */}
-                {isHorseOpen && (
-                  <ul className="pl-8 space-y-1 mt-1">
-                    {renderLeagueLink('horse-racing', 'aus', 'AUS')}
-                    {renderLeagueLink('horse-racing', 'rsa', 'RSA')}
-                    {renderLeagueLink('horse-racing', 'fra', 'FRA')}
-                    {renderLeagueLink('horse-racing', 'gb', 'GB')}
-                    {renderLeagueLink('horse-racing', 'ire', 'IRE')}
-                  </ul>
-                )}
-              </div>
-
-              {/* Greyhound Racing with collapsible sub-menu */}
-              <div>
-                <div
-                  className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    activeItem === 'greyhound'
-                      ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                  }`}
-                  onClick={() => setIsGreyhoundOpen(!isGreyhoundOpen)}
-                >
-                  <div
-                    className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                      activeItem === 'greyhound' ? 'bg-purple-200' : 'bg-gray-200'
-                    }`}
-                  >
-                    <GreyhoundIcon />
-                  </div>
-                  <span className="font-medium text-sm">Greyhound Racing</span>
-                  <div className={`ml-auto transform transition-transform duration-200 ${isGreyhoundOpen ? 'rotate-90' : ''}`}>
-                    <ChevronIcon />
-                  </div>
-                </div>
-
-                {/* Greyhound Racing Countries Sub-List */}
-                {isGreyhoundOpen && (
-                  <ul className="pl-8 space-y-1 mt-1">
-                    {renderLeagueLink('greyhound', 'aus', 'AUS')}
-                    {renderLeagueLink('greyhound', 'gb', 'GB')}
-                  </ul>
-                )}
-              </div>
-
-              {/* Other sports - keep as is */}
-              {sportsCategories.filter(sport => 
-                sport.id !== 'cricket' && 
-                sport.id !== 'football' && 
-                sport.id !== 'basketball' &&
-                sport.id !== 'tennis' &&
-                sport.id !== 'horse-racing' &&
-                sport.id !== 'greyhound'
-              ).map((sport) => {
-                const isActive = activeItem === sport.id;
-                return (
-                  <Link
-                    key={sport.id}
-                    href={sport.href}
-                    prefetch={true}
-                    passHref
-                    legacyBehavior
-                  >
-                    <a
-                      className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                      }`}
-                    >
-                      <div
-                        className={`flex items-center justify-center w-6 h-6 mr-2 rounded-md ${
-                          isActive ? 'bg-purple-200' : 'bg-gray-200'
-                        }`}
-                      >
-                        {sport.icon}
-                      </div>
-                      <span className="font-medium text-sm">{sport.name}</span>
-                      {sport.count && (
-                        <span className="ml-auto text-xs text-gray-500">{sport.count}</span>
-                      )}
-                    </a>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+              <span className="mr-3">{item.icon}</span>
+              {item.name}
+            </Link>
+          ))}
         </div>
 
-        {/* Casino */}
-        <Link
-          href="/casino"
-          prefetch={true}
-          passHref
-          legacyBehavior
-        >
-          <a 
-            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-              activeItem === 'casino'
-                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-            }`}
-          >
-            <div
-              className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                activeItem === 'casino' ? 'bg-purple-200' : 'bg-gray-200'
-              }`}
-            >
-              <CasinoIcon />
-            </div>
-            <span className="font-medium">Casino</span>
-          </a>
-        </Link>
+        {/* Sports Categories */}
+        <div className="mt-8">
+          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Sports
+          </h3>
+          <div className="mt-2 space-y-1">
+            {sportsCategories.map((sport) => (
+              <div key={sport.id}>
+                <button
+                  onClick={() => toggleSport(sport.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    expandedSport === sport.id
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <span className="mr-3">{sport.icon}</span>
+                    <span>{sport.name}</span>
+                  </div>
+                  {sport.count && (
+                    <span className="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                      {sport.count}
+                    </span>
+                  )}
+                </button>
 
-        {/* Wallet */}
-        <Link
-          href="/wallet"
-          prefetch={true}
-          passHref
-          legacyBehavior
-        >
-          <a 
-            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-              activeItem === 'wallet'
-                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-            }`}
-          >
-            <div
-              className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                activeItem === 'wallet' ? 'bg-purple-200' : 'bg-gray-200'
-              }`}
-            >
-              <WalletIcon />
-            </div>
-            <span className="font-medium">My Wallet</span>
-          </a>
-        </Link>
+                {/* Sport-specific leagues */}
+                {expandedSport === sport.id && (
+                  <div className="ml-8 mt-1 space-y-1">
+                    {sport.id === 'cricket' && CRICKET_LEAGUES.map(lg => renderCricketLeague(lg))}
+                    {sport.id === 'football' && FOOTBALL_LEAGUES.map(lg => renderFootballLeague(lg))}
+                    {sport.id === 'basketball' && NEW_BASKETBALL_LEAGUES.map(lg => renderBasketballLeague(lg))}
+                    {sport.id === 'tennis' && TENNIS_LEAGUES.map(lg => (
+                      <Link
+                        key={lg.id}
+                        href={`/tennis/${slugify(lg.name)}`}
+                        className="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md"
+                      >
+                        {lg.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
 
-        {/* News */}
-        <Link
-          href="/news"
-          prefetch={true}
-          passHref
-          legacyBehavior
-        >
-          <a 
-            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-              activeItem === 'news'
-                ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-            }`}
-          >
-            <div
-              className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                activeItem === 'news' ? 'bg-purple-200' : 'bg-gray-200'
-              }`}
-            >
-              <NewsIcon />
-            </div>
-            <span className="font-medium">News</span>
-          </a>
-        </Link>
-        
-        {/* Admin Link at the bottom - only shown for admin users */}
+        {/* Admin Section */}
         {isAdmin && (
-          <Link
-            href="/admin"
-            prefetch={true}
-            passHref
-            legacyBehavior
-          >
-            <a 
-              className={`flex items-center px-3 py-2 rounded-lg transition-colors mt-6 border-t border-[#2a2a2a] pt-6 ${
-                activeItem === 'admin'
-                  ? 'bg-purple-100 border-l-4 border-purple-600 text-gray-800'
-                  : 'text-purple-400 hover:bg-gray-100 hover:text-purple-300'
-              }`}
-            >
-              <div
-                className={`flex items-center justify-center w-8 h-8 mr-3 rounded-md ${
-                  activeItem === 'admin' ? 'bg-purple-200' : 'bg-gray-200'
-                }`}
+          <div className="mt-8">
+            <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Admin
+            </h3>
+            <div className="mt-2">
+              <Link
+                href="/admin"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50"
               >
                 <AdminIcon />
-              </div>
-              <span className="font-medium">Admin Dashboard</span>
-            </a>
-          </Link>
+                <span className="ml-3">Admin Dashboard</span>
+              </Link>
+            </div>
+          </div>
         )}
+
+        {/* Mobile-only additional sections */}
+        <div className="md:hidden mt-8">
+          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Quick Links
+          </h3>
+          <div className="mt-2 space-y-1">
+            <Link
+              href="/promotions"
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50"
+            >
+              <PromotionsIcon />
+              <span className="ml-3">Promotions</span>
+            </Link>
+            <Link
+              href="/live"
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50"
+            >
+              <LiveIcon />
+              <span className="ml-3">Live Events</span>
+            </Link>
+          </div>
+        </div>
       </nav>
-    </aside>
+    </div>
   );
 };
 
