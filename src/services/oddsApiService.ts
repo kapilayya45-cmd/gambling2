@@ -202,12 +202,12 @@ const convertToCompatibleFormat = (
       away: 'Chennai Super Kings'
     },
     'id2700247260533347': {
-      home: 'Royal Challengers Bangalore',
+      home: 'Royal Challengers Bengaluru',
       away: 'Kolkata Knight Riders'
     },
     'id2700247260533349': {
-      home: 'Delhi Capitals',
-      away: 'Rajasthan Royals'
+      home: 'Royal Challengers Bengaluru',
+      away: 'Punjab Kings'
     }
   };
   
@@ -446,6 +446,7 @@ function createFallbackMatches(): CompatibleMatch[] {
   const teamAbbreviations: Record<string, string> = {
     'Mumbai Indians': 'MI',
     'Chennai Super Kings': 'CSK',
+    'Royal Challengers Bengaluru': 'RCB',
     'Royal Challengers Bangalore': 'RCB',
     'Kolkata Knight Riders': 'KKR',
     'Delhi Capitals': 'DC',
@@ -456,91 +457,69 @@ function createFallbackMatches(): CompatibleMatch[] {
     'Lucknow Super Giants': 'LSG'
   };
 
-  // Always use current date and time
-  const currentDate = new Date().toISOString().split('T')[0];
-  const hours = new Date().getHours();
-  const mins = new Date().getMinutes();
-  const currentTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:00`;
-
+  // Use the fixed date from the API for the main match - June 3, 2025
+  const matchDate = "2025-06-03";
+  const matchTime = "14:00:00";
+  
+  // Create today's date for completed match
+  const today = new Date();
+  const todayDate = today.toISOString().split('T')[0];
+  
   return [
+    // Royal Challengers Bengaluru vs Punjab Kings as the primary upcoming match
     {
-      id: "id2700247260533321",
-      title: "Mumbai Indians vs Chennai Super Kings",
-      short_title: `${teamAbbreviations['Mumbai Indians']} vs ${teamAbbreviations['Chennai Super Kings']}`,
-      status: "live", // Always live for in-play tab
-      status_str: "Live",
-      competition_name: "Indian Premier League",
-      competition_id: "ipl",
-      date: currentDate, // Always today
-      time: currentTime, // Current time
-      localteam_id: "mumbai_indians",
-      localteam_name: "Mumbai Indians",
-      localteam_score: "142/3",
-      localteam_overs: "15.2",
-      visitorteam_id: "chennai_super_kings",
-      visitorteam_name: "Chennai Super Kings",
-      visitorteam_score: "",
-      visitorteam_overs: "",
-      venue_name: "Wankhede Stadium",
-      is_live: true, // Always true for in-play tab
-      betting_odds: {
-        match_winner: {
-          "Mumbai Indians": 150.85,
-          "Chennai Super Kings": 160.95
-        }
-      }
-    },
-    {
-      id: "id2700247260533347",
-      title: "Royal Challengers Bangalore vs Kolkata Knight Riders",
-      short_title: `${teamAbbreviations['Royal Challengers Bangalore']} vs ${teamAbbreviations['Kolkata Knight Riders']}`,
+      id: "id2700247260533349",
+      title: "Royal Challengers Bengaluru vs Punjab Kings",
+      short_title: `${teamAbbreviations['Royal Challengers Bengaluru']} vs ${teamAbbreviations['Punjab Kings']}`,
       status: "not_started",
       status_str: "Not Started",
       competition_name: "Indian Premier League",
       competition_id: "ipl",
-      date: currentDate, // Today
-      time: `${(hours + 3).toString().padStart(2, '0')}:00:00`, // 3 hours from now
-      localteam_id: "royal_challengers_bangalore",
-      localteam_name: "Royal Challengers Bangalore",
+      date: matchDate,
+      time: matchTime,
+      localteam_id: "royal_challengers_bengaluru",
+      localteam_name: "Royal Challengers Bengaluru",
       localteam_score: "",
       localteam_overs: "",
-      visitorteam_id: "kolkata_knight_riders",
-      visitorteam_name: "Kolkata Knight Riders",
+      visitorteam_id: "punjab_kings",
+      visitorteam_name: "Punjab Kings",
       visitorteam_score: "",
       visitorteam_overs: "",
       venue_name: "M. Chinnaswamy Stadium",
       is_live: false,
       betting_odds: {
         match_winner: {
-          "Royal Challengers Bangalore": 175.10,
-          "Kolkata Knight Riders": 145.75
+          "Royal Challengers Bengaluru": 159.36, // 1.92 * 83
+          "Punjab Kings": 172.64  // 2.08 * 83
         }
       }
     },
+    // Keep a completed match for historical reference
     {
-      id: "id2700247260533349",
-      title: "Delhi Capitals vs Rajasthan Royals",
-      short_title: `${teamAbbreviations['Delhi Capitals']} vs ${teamAbbreviations['Rajasthan Royals']}`,
-      status: "not_started",
-      status_str: "Not Started",
+      id: "id2700247260533321",
+      title: "Mumbai Indians vs Chennai Super Kings",
+      short_title: `${teamAbbreviations['Mumbai Indians']} vs ${teamAbbreviations['Chennai Super Kings']}`,
+      status: "completed", // This match is over
+      status_str: "Completed",
       competition_name: "Indian Premier League",
       competition_id: "ipl",
-      date: currentDate, // Today
-      time: `${(hours + 6).toString().padStart(2, '0')}:00:00`, // 6 hours from now
-      localteam_id: "delhi_capitals",
-      localteam_name: "Delhi Capitals",
-      localteam_score: "",
-      localteam_overs: "",
-      visitorteam_id: "rajasthan_royals",
-      visitorteam_name: "Rajasthan Royals",
-      visitorteam_score: "",
-      visitorteam_overs: "",
-      venue_name: "Arun Jaitley Stadium",
+      date: todayDate, // Today but in the past
+      time: "09:00:00", // Earlier today
+      localteam_id: "mumbai_indians",
+      localteam_name: "Mumbai Indians",
+      localteam_score: "186/8",
+      localteam_overs: "20.0",
+      visitorteam_id: "chennai_super_kings",
+      visitorteam_name: "Chennai Super Kings",
+      visitorteam_score: "182/6",
+      visitorteam_overs: "20.0",
+      venue_name: "Wankhede Stadium",
       is_live: false,
+      result: "Mumbai Indians won by 4 runs",
       betting_odds: {
         match_winner: {
-          "Delhi Capitals": 155.90,
-          "Rajasthan Royals": 155.90
+          "Mumbai Indians": 150.85,
+          "Chennai Super Kings": 160.95
         }
       }
     }
@@ -731,6 +710,29 @@ export const getMatchDetails = async (matchId: string): Promise<CompatibleMatch>
       
       const liveScores = await getFromCacheOrFetch<LiveScore[]>('liveScores', fetchLiveScores);
       liveData = liveScores.find(ls => ls.id === matchId);
+      
+      // NEW: Try to get real-time betting odds for live matches
+      if (liveData && (liveData.status === 'live' || liveData.eventStatus === 'live' || liveData.eventStatus === 'inprogress')) {
+        console.log(`Match ${matchId} is live, fetching real-time odds...`);
+        try {
+          const liveOdds = await fetchLiveMatchOdds(matchId);
+          if (liveOdds) {
+            // Enhance matchData with the live odds
+            if (!matchData.bookmakers) {
+              matchData.bookmakers = [];
+            }
+            
+            // If we got odds, add them to the bookmakers
+            if (liveOdds.bookmakers && liveOdds.bookmakers.length > 0) {
+              matchData.bookmakers = liveOdds.bookmakers;
+              console.log(`Successfully updated match ${matchId} with real-time odds`);
+            }
+          }
+        } catch (oddsError) {
+          console.error(`Failed to get real-time odds for match ${matchId}:`, oddsError);
+          // Continue with existing odds data
+        }
+      }
     } catch {
       // ignore live fetch failures
     }
@@ -748,29 +750,137 @@ export const getMatchDetails = async (matchId: string): Promise<CompatibleMatch>
       return fallbackMatch;
     }
     
-    // If no fallback match found, return empty template
+    // Create a basic error match object
     return {
       id: matchId,
-      title: 'Match data unavailable',
-      short_title: 'Match data unavailable',
-      status: 'not_started',
-      status_str: 'Data Unavailable',
-      competition_name: IPL_CONFIG.LEAGUE_NAME,
-      competition_id: 'ipl',
+      title: 'Match Not Found',
+      short_title: 'Match Not Found',
+      status: 'not_found',
+      status_str: 'Not Found',
+      competition_name: 'Unknown',
+      competition_id: 'unknown',
       date: new Date().toISOString().split('T')[0],
       time: new Date().toISOString().split('T')[1].substring(0, 8),
-      localteam_id: '',
-      localteam_name: '',
+      localteam_id: 'unknown',
+      localteam_name: 'Unknown Team',
       localteam_score: '',
       localteam_overs: '',
-      visitorteam_id: '',
-      visitorteam_name: '',
+      visitorteam_id: 'unknown',
+      visitorteam_name: 'Unknown Team',
       visitorteam_score: '',
       visitorteam_overs: '',
-      venue_name: '',
+      venue_name: 'Unknown',
       is_live: false,
       betting_odds: {},
     };
+  }
+};
+
+/**
+ * Fetch live betting odds for a specific match using direct endpoint
+ */
+export const fetchLiveMatchOdds = async (matchId: string): Promise<any> => {
+  try {
+    console.log(`Fetching live odds for match ID: ${matchId}`);
+    
+    // If this is the Delhi Capitals vs Rajasthan Royals match, use the specific endpoint
+    if (matchId === 'id2700247260533349') {
+      console.log('Using specific endpoint for Royal Challengers Bengaluru vs Punjab Kings match');
+      const url = 'https://odds-api1.p.rapidapi.com/odds?eventId=id2700247260533349&bookmakers=betfair-ex&oddsFormat=decimal&raw=true';
+      
+      console.log(`Full API URL: ${url}`);
+      
+      const options = {
+        method: 'GET',
+        headers: {
+          'X-RapidAPI-Key': process.env.NEXT_PUBLIC_RAPID_API_KEY || '1020ae1023msh7e73e2903b32c6fp1c73d5jsne2584a26764b',
+          'X-RapidAPI-Host': 'odds-api1.p.rapidapi.com'
+        }
+      };
+      
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        throw new Error(`API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      console.log(`Successfully fetched live odds for Royal Challengers Bengaluru vs Punjab Kings match`);
+      
+      // Process the data to extract bookmakers and markets
+      if (data && data.bookmakers) {
+        // Return the odds data in a format compatible with our existing code
+        return {
+          id: matchId,
+          bookmakers: data.bookmakers.map((bookmaker: any) => ({
+            key: bookmaker.key,
+            title: bookmaker.title,
+            markets: bookmaker.markets.map((market: any) => ({
+              key: market.key,
+              outcomes: market.outcomes.map((outcome: any) => ({
+                name: outcome.name,
+                price: outcome.price
+              }))
+            }))
+          }))
+        };
+      }
+      
+      return null;
+    } 
+    
+    // For other match IDs, use the normal logic
+    // Make sure we're using the exact format of the event ID
+    // The image shows "id2700247260533349" format
+    const eventId = matchId.startsWith('id') ? matchId : `id${matchId}`;
+    
+    // Use the general endpoint
+    const url = `https://odds-api1.p.rapidapi.com/odds?eventId=${eventId}&bookmakers=betfair-ex&oddsFormat=decimal&raw=true`;
+    
+    console.log(`Full API URL: ${url}`);
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'X-RapidAPI-Key': process.env.NEXT_PUBLIC_RAPID_API_KEY || '1020ae1023msh7e73e2903b32c6fp1c73d5jsne2584a26764b',
+        'X-RapidAPI-Host': 'odds-api1.p.rapidapi.com'
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      throw new Error(`API responded with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    console.log(`Successfully fetched live odds for match ${matchId}`);
+    
+    // Process the data to extract bookmakers and markets
+    if (data && data.bookmakers) {
+      // Return the odds data in a format compatible with our existing code
+      return {
+        id: matchId,
+        bookmakers: data.bookmakers.map((bookmaker: any) => ({
+          key: bookmaker.key,
+          title: bookmaker.title,
+          markets: bookmaker.markets.map((market: any) => ({
+            key: market.key,
+            outcomes: market.outcomes.map((outcome: any) => ({
+              name: outcome.name,
+              price: outcome.price
+            }))
+          }))
+        }))
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching live odds for match ${matchId}:`, error);
+    return null;
   }
 };
 

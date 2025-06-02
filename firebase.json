@@ -12,70 +12,57 @@
       {
         "source": "**/*.@(js|css)",
         "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "max-age=31536000"
-          }
+          { "key": "Cache-Control", "value": "max-age=31536000" }
         ]
       },
       {
         "source": "**/*.@(jpg|jpeg|gif|png|svg|webp)",
         "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "max-age=31536000"
-          }
+          { "key": "Cache-Control", "value": "max-age=31536000" }
         ]
       }
     ],
     "rewrites": [
-      {
-        "source": "/admin",
-        "destination": "/admin.html"
-      },
-      {
-        "source": "/api-example",
-        "destination": "/api-example.html"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
+      { "source": "/admin",       "destination": "/admin.html" },
+      { "source": "/api-example", "destination": "/api-example.html" },
+      { "source": "**",           "destination": "/index.html" }
     ]
   },
+
   "firestore": {
     "database": "(default)",
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+    "rules":     "firestore.rules",
+    "indexes":   "firestore.indexes.json"
   },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ],
-      "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint"
-      ]
+
+  "functions": {
+    "source": ".",
+    "codebase": "default",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "*.local"
+    ],
+    "predeploy": [
+      "npm run build"
+    ]
+  },
+
+  "emulators": {
+    "functions": {
+      "port": 5001
     },
-    {
-      "source": "functions-backend",
-      "codebase": "foxxy",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ],
-      "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint"
-      ]
+    "firestore": {
+      "port": 8080
+    },
+    "auth": {
+      "port": 9099
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
     }
-  ]
+  }
 }

@@ -8,6 +8,12 @@ import { BetSlipProvider } from '@/contexts/BetSlipContext';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
+import { Inter } from 'next/font/google';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { CoinsProvider } from '@/contexts/CoinsContext';
+
+const inter = Inter({ subsets: ['latin'] });
 
 // Create a client
 const queryClient = new QueryClient({
@@ -29,13 +35,28 @@ export default function App({ Component, pageProps }: AppProps) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <WalletProvider>
-          <BetSlipProvider>
-            <AdminProvider>
-              <AppContent>
-                <Component {...pageProps} />
-              </AppContent>
-            </AdminProvider>
-          </BetSlipProvider>
+          <CoinsProvider>
+            <BetSlipProvider>
+              <AdminProvider>
+                <AppContent>
+                  <main className={inter.className}>
+                    <ToastContainer
+                      position="top-right"
+                      autoClose={5000}
+                      hideProgressBar={false}
+                      newestOnTop
+                      closeOnClick
+                      rtl={false}
+                      pauseOnFocusLoss
+                      draggable
+                      pauseOnHover
+                    />
+                    <Component {...pageProps} />
+                  </main>
+                </AppContent>
+              </AdminProvider>
+            </BetSlipProvider>
+          </CoinsProvider>
         </WalletProvider>
       </AuthProvider>
     </QueryClientProvider>

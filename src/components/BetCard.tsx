@@ -33,7 +33,7 @@ const BetCard: React.FC<BetCardProps> = ({
         <span className="text-sm font-medium text-purple-400">
           {status === 'live' ? 'LIVE' : status === 'settled' ? 'SETTLED' : 'CASH OUT'}
         </span>
-        <span className="text-xs text-gray-400">Bet #{betId}</span>
+        <span className="text-xs text-gray-400">Bet #{betId.substring(0, 8)}</span>
       </div>
       
       <h3 className="font-medium mb-2 text-white">{match}</h3>
@@ -48,14 +48,14 @@ const BetCard: React.FC<BetCardProps> = ({
         </div>
         <div className="bg-[#2a3040] rounded p-2">
           <span className="block text-gray-400">Stake</span>
-          <span className="text-white font-medium">${stake.toFixed(2)}</span>
+          <span className="text-white font-medium">₹{stake.toFixed(2)}</span>
         </div>
       </div>
       
       <div className="flex justify-between items-center">
         <div>
           <span className="block text-xs text-gray-400">Potential Win</span>
-          <span className="text-green-400 font-medium">${potentialWin.toFixed(2)}</span>
+          <span className="text-green-400 font-medium">₹{potentialWin.toFixed(2)}</span>
         </div>
         
         {status === 'live' && onCashOut && (

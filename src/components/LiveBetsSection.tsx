@@ -84,19 +84,40 @@ const LiveBetsSection: React.FC<LiveBetsSectionProps> = ({ onCashOut }) => {
         const bets: MatchBet[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
+          
+          // Extract data with fallbacks for different formats
+          const matchId = data.matchId || 0;
+          const match = data.match || 'Unknown Match';
+          const selection = data.selection || 'Unknown Selection';
+          const odds = data.odds || 1.0;
+          const stake = data.stake || 0;
+          const potentialWin = data.potentialWin || (stake * odds);
+          
+          // Format creation time
+          let createdAt = '';
+          if (data.createdAt?.toDate) {
+            createdAt = data.createdAt.toDate().toISOString();
+          } else if (data.timestamp?.toDate) {
+            createdAt = data.timestamp.toDate().toISOString();
+          } else if (data.createdAt) {
+            createdAt = data.createdAt;
+          } else if (data.timestamp) {
+            createdAt = data.timestamp;
+          } else {
+            createdAt = new Date().toISOString();
+          }
+          
           bets.push({
             id: doc.id,
             userId: data.userId,
-            matchId: data.matchId,
-            match: data.match,
-            selection: data.selection,
-            odds: data.odds,
-            stake: data.stake,
-            potentialWin: data.potentialWin,
-            status: data.status,
-            createdAt: data.createdAt?.toDate?.() 
-              ? data.createdAt.toDate().toISOString()
-              : data.createdAt
+            matchId,
+            match,
+            selection,
+            odds,
+            stake,
+            potentialWin,
+            status: data.status || 'live',
+            createdAt
           });
         });
         setLiveBets(bets);
@@ -144,8 +165,8 @@ const LiveBetsSection: React.FC<LiveBetsSectionProps> = ({ onCashOut }) => {
 
   if (liveBets.length === 0) {
     return (
-      <div className="bg-[#1a1f2c] rounded-lg p-5 text-center">
-        <p className="text-gray-400">No live bets at the moment</p>
+      <div className="bg-white rounded-lg p-5 text-center border border-gray-200 shadow">
+        <p className="text-gray-500">No live bets at the moment</p>
         <button 
           className="mt-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition-colors"
           onClick={() => window.location.href = '/sports'}

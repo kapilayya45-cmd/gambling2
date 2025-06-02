@@ -2,12 +2,18 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { CricketFixture, CRICKET_TEAM_NAMES } from '@/services/cricketApi';
+import { CRICKET_TEAM_NAMES } from '@/services/cricketApi';
+import type { CompatibleMatch } from '@/types/oddsApiTypes';
 import { useLiveOdds } from '@/hooks/useLiveOdds';
 import MarketTabs, { BettingMarket } from '@/components/cricket/MarketTabs';
 import CricketOddsGrid from '@/components/cricket/CricketOddsGrid';
+import BettingOddsCard from '@/components/cricket/BettingOddsCard';
 import FilterPanel from '@/components/cricket/FilterPanel';
 import { HelpButton, default as HelpChatWidget } from '@/components/cricket/HelpChatWidget';
+import TimeRemainingCountdown from '@/components/cricket/TimeRemainingCountdown';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCoins } from '@/contexts/CoinsContext';
+import { recordBet } from '@/services/betService';
 
 // Interface for bet selection
 interface BetSelection {
@@ -34,7 +40,7 @@ interface FilterOption {
   name: string;
 }
 
-// Scoreboard interface (for the extended CricketFixture)
+// Scoreboard interface (for the extended CompatibleMatch)
 interface Scoreboard {
   team_id: number;
   type: string;
@@ -47,6 +53,10 @@ interface Scoreboard {
 export default function IPLBetsPage() {
   const router = useRouter();
   const { team } = router.query;
+  
+  // Auth and coins contexts
+  const { currentUser } = useAuth();
+  const { coinsBalance, deductCoins } = useCoins();
   
   // If team name from URL contains dashes, convert to spaces for display
   const teamNameForDisplay = typeof team === 'string' 
@@ -67,13 +77,21 @@ export default function IPLBetsPage() {
   }, [team, teamNameForDisplay]);
   
   // Use the custom hook for live odds data
-  const { matches, loading, error } = useLiveOdds();
+  const { matches, loading, error, refetch, lastUpdated } = useLiveOdds();
   
-  const [filteredMatches, setFilteredMatches] = useState<CricketFixture[]>([]);
-  const [selectedMatch, setSelectedMatch] = useState<CricketFixture | null>(null);
+  // Log when the matches data changes to verify data flow
+  useEffect(() => {
+    console.log('🏏 Matches data updated:', matches);
+    if (matches && matches.length > 0) {
+      console.log('🎯 Match found:', matches[0].title);
+      console.log('💰 Betting odds:', matches[0].betting_odds?.match_winner);
+    }
+  }, [matches]);
+  
+  const [filteredMatches, setFilteredMatches] = useState<CompatibleMatch[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<CompatibleMatch | null>(null);
   const [selectedMarket, setSelectedMarket] = useState<BettingMarket>('match-winner');
   const [placedBets, setPlacedBets] = useState<PlacedBet[]>([]);
-  const [walletBalance, setWalletBalance] = useState(10000); // Mock wallet balance
   const [showChat, setShowChat] = useState(false);
   const [showBets, setShowBets] = useState(false);
   const [activeFilters, setActiveFilters] = useState<{
@@ -108,36 +126,48 @@ export default function IPLBetsPage() {
   ];
 
   // Function to check if a team is part of a match
-  const isTeamInMatch = (teamName: string, match: CricketFixture): boolean => {
+  const isTeamInMatch = (teamName: string, match: CompatibleMatch): boolean => {
     if (!teamName) return true; // If no team specified, return all matches
     
     const normalizedTeamName = teamName.toLowerCase().replace(/-/g, ' ');
     
-    // First check if we have team name from included data in the API response
-    let teamA = '';
-    let teamB = '';
+    // Get team names from the match
+    const teamA = match.localteam_name.toLowerCase();
+    const teamB = match.visitorteam_name.toLowerCase();
     
-    // Try to get team names from API-included data first
-    if (match.localteam && typeof match.localteam === 'object' && match.localteam.name) {
-      teamA = match.localteam.name;
-    } else {
-      // Fall back to mapping
-      teamA = CRICKET_TEAM_NAMES[match.localteam_id] || '';
-    }
-    
-    if (match.visitorteam && typeof match.visitorteam === 'object' && match.visitorteam.name) {
-      teamB = match.visitorteam.name;
-    } else {
-      // Fall back to mapping
-      teamB = CRICKET_TEAM_NAMES[match.visitorteam_id] || '';
-    }
-    
-    console.log(`Checking if "${normalizedTeamName}" is part of "${teamA.toLowerCase()}" or "${teamB.toLowerCase()}"`);
+    console.log(`Checking if "${normalizedTeamName}" is part of "${teamA}" or "${teamB}"`);
     
     return (
-      teamA.toLowerCase().includes(normalizedTeamName) || 
-      teamB.toLowerCase().includes(normalizedTeamName)
+      teamA.includes(normalizedTeamName) || 
+      teamB.includes(normalizedTeamName)
     );
+  };
+
+  // Function to check if a match is Punjab Kings vs Mumbai Indians
+  const isPunjabVsMumbaiMatch = (match: CompatibleMatch): boolean => {
+    // Get team names
+    const teamA = match.localteam_name.toLowerCase();
+    const teamB = match.visitorteam_name.toLowerCase();
+    
+    // Exact check for Punjab Kings vs Mumbai Indians (in either order)
+    return (
+      (teamA.includes('punjab') && teamA.includes('kings') && teamB.includes('mumbai') && teamB.includes('indians')) || 
+      (teamB.includes('punjab') && teamB.includes('kings') && teamA.includes('mumbai') && teamA.includes('indians'))
+    );
+  };
+
+  // Function to check if a match is live or upcoming
+  const isMatchLiveOrUpcoming = (match: CompatibleMatch): boolean => {
+    // Get the match datetime
+    const matchDateTime = new Date(`${match.date}T${match.time}`);
+    const now = new Date();
+    
+    // If match time is more than 3 hours in the past, consider it completed
+    if (matchDateTime.getTime() < now.getTime() - (3 * 60 * 60 * 1000)) {
+      return false;
+    }
+    
+    return true;
   };
 
   // Filter matches when team name or matches change
@@ -145,14 +175,17 @@ export default function IPLBetsPage() {
     if (matches.length === 0) return;
     
     console.log(`Filtering for team: ${teamName}`);
-    console.log(`Available matches:`, matches.map(m => `${CRICKET_TEAM_NAMES[m.localteam_id]} vs ${CRICKET_TEAM_NAMES[m.visitorteam_id]}`));
+    console.log(`Available matches:`, matches.map(m => `${m.localteam_name} vs ${m.visitorteam_name}`));
     
-    // If team is specified, filter for that team's matches
+    // Filter for live or upcoming matches only - skip filtering out Punjab vs Mumbai as it's no longer relevant
+    const liveOrUpcomingMatches = matches.filter(isMatchLiveOrUpcoming);
+    
+    // Then apply team filter if specified
     const matchesToShow = teamName 
-      ? matches.filter(match => isTeamInMatch(teamName, match))
-      : matches;
+      ? liveOrUpcomingMatches.filter(match => isTeamInMatch(teamName, match))
+      : liveOrUpcomingMatches;
     
-    console.log(`Filtered matches:`, matchesToShow.length);
+    console.log(`Filtered matches:`, matchesToShow.map(m => `${m.localteam_name} vs ${m.visitorteam_name}`));
     setFilteredMatches(matchesToShow);
     
     // Set the first match as selected if we have matches and none selected
@@ -162,7 +195,7 @@ export default function IPLBetsPage() {
   }, [teamName, matches, selectedMatch]);
 
   // Handle selection of a match
-  const handleSelectMatch = (match: CricketFixture) => {
+  const handleSelectMatch = (match: CompatibleMatch) => {
     setSelectedMatch(match);
   };
 
@@ -172,29 +205,59 @@ export default function IPLBetsPage() {
   };
 
   // Handle placing a bet
-  const handlePlaceBet = (selection: BetSelection) => {
+  const handlePlaceBet = async (selection: BetSelection) => {
     // Validate if user has enough balance
-    if (selection.stake > walletBalance) {
-      alert(`Insufficient balance. Available: ₹${walletBalance.toLocaleString()}`);
+    if (selection.stake > coinsBalance) {
+      alert(`Insufficient balance. Available: ₹${coinsBalance.toLocaleString()}`);
       return;
     }
     
-    const placedBet: PlacedBet = {
-      ...selection,
-      selectionId: `${selection.matchId}_${selection.selection}_${Date.now()}`,
-      betId: `bet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      placedAt: new Date(),
-      potentialWin: selection.stake * selection.odds
-    };
+    if (!currentUser) {
+      alert('You must be logged in to place a bet');
+      return;
+    }
     
-    // Add the bet to the placed bets list
-    setPlacedBets([...placedBets, placedBet]);
+    // Make sure we have the match information
+    if (!selectedMatch) {
+      alert('Match information not available');
+      return;
+    }
     
-    // Deduct stake from wallet balance
-    setWalletBalance(prev => prev - selection.stake);
-    
-    // Show a success message
-    alert(`Bet placed successfully on ${selection.selection} for ₹${selection.stake}`);
+    try {
+      // Construct proper match name
+      const matchName = `${selectedMatch.localteam_name} vs ${selectedMatch.visitorteam_name}`;
+      
+      // Record the bet in Firestore so it appears in live bets
+      await recordBet(currentUser.uid, {
+        matchId: selection.matchId,
+        match: matchName,
+        selection: selection.selection,
+        market: selection.market,
+        odds: selection.odds,
+        stake: selection.stake,
+        side: selection.side
+      });
+      
+      // Add the bet to the placed bets list locally
+      const placedBet: PlacedBet = {
+        ...selection,
+        selectionId: `${selection.matchId}_${selection.selection}_${Date.now()}`,
+        betId: `bet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        placedAt: new Date(),
+        potentialWin: selection.stake * selection.odds
+      };
+      
+      setPlacedBets([...placedBets, placedBet]);
+      
+      // Deduct coins
+      deductCoins(selection.stake);
+      
+      // Show a success message
+      alert(`Bet placed successfully on ${selection.selection} for ₹${selection.stake}`);
+    } catch (error) {
+      console.error('Error placing bet:', error);
+      alert('Failed to place bet. Please try again.');
+    }
   };
   
   // Handle filter changes
@@ -217,14 +280,13 @@ export default function IPLBetsPage() {
   };
 
   // Helper function to get team name display
-  const getTeamName = (teamId: number, match: CricketFixture): string => {
-    // Try to get team names from API-included data first
-    if (match.localteam && match.localteam_id === teamId && match.localteam.name) {
-      return match.localteam.name;
+  const getTeamName = (teamId: number | string, match: CompatibleMatch): string => {
+    if (teamId === match.localteam_id) {
+      return match.localteam_name;
     }
     
-    if (match.visitorteam && match.visitorteam_id === teamId && match.visitorteam.name) {
-      return match.visitorteam.name;
+    if (teamId === match.visitorteam_id) {
+      return match.visitorteam_name;
     }
     
     // Fall back to mapping
@@ -249,9 +311,6 @@ export default function IPLBetsPage() {
             </Link>
             
             <div className="flex space-x-4 items-center">
-              <div className="px-4 py-2 border border-gray-200 rounded-lg bg-white text-gray-800">
-                Balance: ₹{walletBalance.toLocaleString()}
-              </div>
               <button 
                 onClick={handleDeposit}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
@@ -306,7 +365,15 @@ export default function IPLBetsPage() {
                       {getTeamName(match.localteam_id, match)} vs {getTeamName(match.visitorteam_id, match)}
                     </div>
                     <div className="text-sm text-gray-500 mt-1">
-                      {new Date(match.starting_at).toLocaleDateString()} - {match.venue?.name || 'TBD'}
+                      {new Date(`${match.date}T${match.time}`).toLocaleDateString()} - {match.venue_name || 'TBD'}
+                    </div>
+                    {/* Add time remaining indicator */}
+                    <div className="mt-2">
+                      <TimeRemainingCountdown 
+                        matchDate={match.date} 
+                        matchTime={match.time} 
+                        matchId={match.id}
+                      />
                     </div>
                   </button>
                 ))}
@@ -333,27 +400,38 @@ export default function IPLBetsPage() {
                   {getTeamName(selectedMatch.localteam_id, selectedMatch)} vs {getTeamName(selectedMatch.visitorteam_id, selectedMatch)}
                 </h1>
                 <div className="text-gray-600">
-                  {new Date(selectedMatch.starting_at).toLocaleString()} at {selectedMatch.venue?.name || 'TBD'}
+                  {new Date(`${selectedMatch.date}T${selectedMatch.time}`).toLocaleString()} at {selectedMatch.venue_name || 'TBD'}
                 </div>
-                {selectedMatch.status === 'live' && (
-                  <div className="mt-2 px-2 py-1 bg-green-100 text-green-800 inline-block rounded text-sm">
-                    LIVE
-                  </div>
-                )}
                 
-                {/* Innings summary - check if scoreboards exists first */}
-                {selectedMatch.scoreboards && Array.isArray(selectedMatch.scoreboards) && selectedMatch.scoreboards.length > 0 && (
+                {/* Add time remaining countdown for the selected match */}
+                <div className="mt-3 mb-3">
+                  <TimeRemainingCountdown 
+                    matchDate={selectedMatch.date} 
+                    matchTime={selectedMatch.time} 
+                    matchId={selectedMatch.id}
+                  />
+                </div>
+                
+                {/* Remove the scoreboards section as it's not part of the CompatibleMatch type */}
+                {/* Instead, show team scores if available */}
+                {(selectedMatch.localteam_score || selectedMatch.visitorteam_score) && (
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedMatch.scoreboards.map((scoreboard: Scoreboard, idx: number) => (
-                      <div key={idx} className="bg-gray-50 p-3 rounded border border-gray-200">
-                        <div className="font-medium">
-                          {getTeamName(scoreboard.team_id, selectedMatch)} - {scoreboard.type}
-                        </div>
-                        <div className="text-xl font-bold mt-1">
-                          {scoreboard.total}/{scoreboard.wickets} ({scoreboard.overs})
-                        </div>
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                      <div className="font-medium">
+                        {selectedMatch.localteam_name}
                       </div>
-                    ))}
+                      <div className="text-xl font-bold mt-1">
+                        {selectedMatch.localteam_score || '0'} ({selectedMatch.localteam_overs || '0'})
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                      <div className="font-medium">
+                        {selectedMatch.visitorteam_name}
+                      </div>
+                      <div className="text-xl font-bold mt-1">
+                        {selectedMatch.visitorteam_score || '0'} ({selectedMatch.visitorteam_overs || '0'})
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -372,14 +450,33 @@ export default function IPLBetsPage() {
                   onSelectMarket={handleSelectMarket}
                 />
                 
-                <div className="mt-4">
-                  <CricketOddsGrid
-                    match={selectedMatch}
-                    market={selectedMarket}
-                    playerFilters={activeFilters.players}
-                    onPlaceBet={handlePlaceBet}
+                {selectedMarket === 'match-winner' ? (
+                  <BettingOddsCard 
+                    onPlaceBet={(team, odds) => {
+                      // Create a bet selection object
+                      const selection: BetSelection = {
+                        selectionId: team === 'Royal Challengers Bengaluru' ? '67868736' : '38528100',
+                        matchId: parseInt(selectedMatch.id.replace('id', '')),
+                        eventId: parseInt(selectedMatch.id.replace('id', '')),
+                        selection: team,
+                        market: 'match-winner',
+                        odds: odds,
+                        side: 'back',
+                        stake: 100 // Default stake
+                      };
+                      handlePlaceBet(selection);
+                    }} 
                   />
-                </div>
+                ) : (
+                  <div className="mt-4">
+                    <CricketOddsGrid
+                      match={selectedMatch}
+                      market={selectedMarket}
+                      playerFilters={activeFilters.players}
+                      onPlaceBet={handlePlaceBet}
+                    />
+                  </div>
+                )}
               </>
             )}
           </div>

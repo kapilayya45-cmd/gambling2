@@ -5,7 +5,7 @@ import { getIPLMatchesFromOddsApi1 } from '@/services/directOddsApi';
 let routeCache = {
   data: null as any,
   timestamp: 0,
-  expiry: 2 * 60 * 1000 // 2 minutes cache
+  expiry: 1 * 60 * 1000 // Reduce to 1 minute cache to get fresher data
 };
 
 // Demo matches for fallback if everything fails
@@ -39,28 +39,28 @@ const DEMO_MATCHES = [
   },
   {
     id: "demo2",
-    title: "Royal Challengers Bangalore vs Kolkata Knight Riders",
-    short_title: "RCB vs KKR",
+    title: "Royal Challengers Bengaluru vs Punjab Kings",
+    short_title: "RCB vs PBKS",
     status: "not_started",
     status_str: "Not Started",
     competition_name: "Indian Premier League",
     competition_id: "ipl",
     date: "2025-06-03",
     time: "14:00:00",
-    localteam_id: "royal_challengers_bangalore",
-    localteam_name: "Royal Challengers Bangalore",
+    localteam_id: "royal_challengers_bengaluru",
+    localteam_name: "Royal Challengers Bengaluru",
     localteam_score: "",
     localteam_overs: "",
-    visitorteam_id: "kolkata_knight_riders",
-    visitorteam_name: "Kolkata Knight Riders",
+    visitorteam_id: "punjab_kings",
+    visitorteam_name: "Punjab Kings",
     visitorteam_score: "",
     visitorteam_overs: "",
     venue_name: "M. Chinnaswamy Stadium",
     is_live: false,
     betting_odds: {
       match_winner: {
-        "Royal Challengers Bangalore": 2.10,
-        "Kolkata Knight Riders": 1.75
+        "Royal Challengers Bengaluru": 2.10,
+        "Punjab Kings": 1.75
       }
     }
   }
@@ -77,17 +77,29 @@ export default async function handler(
   try {
     console.log("API route: Attempting to fetch IPL odds");
     
-    // Check if we have valid cached data
-    if (routeCache.data && (Date.now() - routeCache.timestamp) < routeCache.expiry) {
+    // Always fetch fresh data for debugging purposes by setting skipCache=true in query
+    const skipCache = req.query.skipCache === 'true';
+    
+    // Check if we have valid cached data and skipCache is not set
+    if (!skipCache && routeCache.data && (Date.now() - routeCache.timestamp) < routeCache.expiry) {
       console.log('Using API route cache');
       
       // Return cached data with cache header
       return res.status(200).json(routeCache.data);
     }
 
-    // Fetch new data using the new API client
+    // Force fetching new data
+    console.log("Fetching fresh data from odds-api1...");
     const matches = await getIPLMatchesFromOddsApi1();
     console.log(`API route: Fetched ${matches.length} IPL matches from odds-api1`);
+    
+    // Log match details for debugging
+    if (matches && matches.length > 0) {
+      console.log("Matches found:");
+      matches.forEach(match => {
+        console.log(`- ${match.localteam_name} vs ${match.visitorteam_name} (ID: ${match.id}, Date: ${match.date})`);
+      });
+    }
     
     // If no matches returned, use demo matches
     if (!matches || matches.length === 0) {

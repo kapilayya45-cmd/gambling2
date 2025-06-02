@@ -37,6 +37,22 @@ export interface Outcome {
   point?: number;
 }
 
+// Betfair Exchange specific interfaces
+export interface BetfairRunner {
+  runnerId: string;
+  runnerName: string;
+  odds: number;
+}
+
+export interface BetfairData {
+  marketId: string;
+  eventId: string;
+  matchOdds: {
+    [team: string]: number;
+  };
+  runners: BetfairRunner[];
+}
+
 // Live score information
 export interface LiveScore {
   id: string;
@@ -50,6 +66,8 @@ export interface LiveScore {
   league_key?: string;         // League key (e.g., 'ipl')
   league?: string;             // League name (e.g., 'Indian Premier League')
   venue?: string;              // Venue name
+  status?: string;             // Status of the match ('live', 'completed', etc.)
+  eventStatus?: string;        // Alternative status field used by some API responses
   scores?: {
     home: {
       score: string;
@@ -112,4 +130,7 @@ export interface CompatibleMatch {
       };
     };
   };
+  // Betfair Exchange specific fields
+  market_id?: string;          // Betfair Market ID
+  betfair_data?: BetfairData;  // Raw Betfair Exchange data
 } 

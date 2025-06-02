@@ -1,26 +1,13 @@
-const admin = require('firebase-admin');
-let serviceAccount;
+// scripts/setRole.js
 
-try {
-  // Try to load the service account file
-  serviceAccount = require('../firebase-service-account.json');
-} catch (error) {
-  console.error('Error loading service account file:');
-  console.error('Make sure you have a valid firebase-service-account.json file in your project root');
-  console.error('You can download this from Firebase Console > Project Settings > Service accounts');
-  console.error('\nDetailed error:', error.message);
-  process.exit(1);
-}
+const admin = require('firebase-admin');
+// directly require the service account JSON
+const serviceAccount = require('../firebase-service-account.json');
 
 // Initialize Firebase Admin SDK
-try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-} catch (error) {
-  console.error('Failed to initialize Firebase Admin SDK:', error.message);
-  process.exit(1);
-}
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 // Get command line arguments
 const [,, uid, role] = process.argv;
@@ -29,7 +16,7 @@ const [,, uid, role] = process.argv;
 if (!uid || !role) {
   console.error('Usage: node scripts/setRole.js <UID> <role>');
   console.error('Example: node scripts/setRole.js abc123def456 superadmin');
-  console.error('\nAvailable roles: admin, superadmin, user');
+  console.error('Available roles: admin, superadmin, user');
   process.exit(1);
 }
 
@@ -43,7 +30,6 @@ if (!['admin', 'superadmin', 'user'].includes(role)) {
 admin.auth().setCustomUserClaims(uid, { role })
   .then(() => {
     console.log(`✅ Successfully set user ${uid} role to "${role}"`);
-    
     // Also update the user document in Firestore
     return admin.firestore().collection('users').doc(uid).update({
       role: role,
@@ -59,4 +45,4 @@ admin.auth().setCustomUserClaims(uid, { role })
     console.error('❌ Error setting role:');
     console.error(err);
     process.exit(1);
-  }); 
+  });

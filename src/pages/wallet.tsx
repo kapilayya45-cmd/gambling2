@@ -25,6 +25,7 @@ export default function Wallet() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [paymentMethod, setPaymentMethod] = useState('credit-card');
   const [showCardForm, setShowCardForm] = useState(false);
+  const [upiId, setUpiId] = useState('');
   const [cardDetails, setCardDetails] = useState({
     cardNumber: '',
     cardName: '',
@@ -141,6 +142,12 @@ export default function Wallet() {
       }
     }
     
+    // Validate UPI ID if payment method is UPI
+    if (paymentMethod === 'upi' && !upiId.trim()) {
+      alert('Please enter a valid UPI ID');
+      return;
+    }
+    
     try {
       setIsProcessing(true);
       
@@ -154,7 +161,7 @@ export default function Wallet() {
         amount: parseFloat(depositAmount),
         status: 'completed',
         date: new Date().toISOString(),
-        description: `Deposit via ${paymentMethod === 'credit-card' ? 'Credit Card' : 'UPI'}`
+        description: `Deposit via ${paymentMethod === 'credit-card' ? 'Credit Card' : 'UPI: ' + upiId}`
       };
       
       setTransactions([newTransaction, ...transactions]);
@@ -162,6 +169,7 @@ export default function Wallet() {
       // Reset form
       setDepositAmount('');
       setShowCardForm(false);
+      setUpiId('');
       setCardDetails({
         cardNumber: '',
         cardName: '',
@@ -398,11 +406,11 @@ export default function Wallet() {
                           </div>
                           
                           <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                               Payment Method
                             </label>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div
+                            <div className="grid grid-cols-2 gap-3">
+                              <div 
                                 className={`border ${
                                   paymentMethod === 'credit-card' 
                                     ? 'border-purple-500 bg-purple-50' 
@@ -419,6 +427,7 @@ export default function Wallet() {
                                   <span className="ml-3 font-medium">Credit/Debit Card</span>
                                 </div>
                               </div>
+                              
                               <div
                                 className={`border ${
                                   paymentMethod === 'upi' 
@@ -438,6 +447,27 @@ export default function Wallet() {
                               </div>
                             </div>
                           </div>
+                          
+                          {/* UPI ID input field, only shown when UPI is selected */}
+                          {paymentMethod === 'upi' && (
+                            <div className="mb-4">
+                              <label htmlFor="upi-id" className="block text-sm font-medium text-gray-700 mb-1">
+                                UPI ID
+                              </label>
+                              <input
+                                type="text"
+                                id="upi-id"
+                                value={upiId}
+                                onChange={(e) => setUpiId(e.target.value)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                placeholder="yourname@upi"
+                                required
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Enter your UPI ID (e.g., name@okhdfcbank, 1234567890@paytm)
+                              </p>
+                            </div>
+                          )}
                           
                           <div className="mt-6">
                             <button

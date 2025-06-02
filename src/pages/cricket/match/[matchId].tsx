@@ -7,6 +7,7 @@ import Sidebar from '@/components/Sidebar';
 import UserBalanceDisplay from '@/components/UserBalanceDisplay';
 import MarketTabs, { BettingMarket } from '@/components/cricket/MarketTabs';
 import BetSlip from '@/components/BetSlip';
+import MatchBetSlip from '@/components/cricket/MatchBetSlip';
 import { CompatibleMatch } from '@/types/oddsApiTypes';
 import { IPL_CONFIG } from '@/config/oddsApiConfig';
 import { useBetSlip } from '@/contexts/BetSlipContext';
@@ -37,6 +38,7 @@ export default function CricketMatchPage() {
   const [match, setMatch] = useState<CompatibleMatch | null>(null);
   const [activeMarket, setActiveMarket] = useState<BettingMarket>('match-winner');
   const [betslipOpen, setBetslipOpen] = useState(false);
+  const [selectedBets, setSelectedBets] = useState<any[]>([]);
 
   useEffect(() => {
     if (!matchId) return;
@@ -69,8 +71,30 @@ export default function CricketMatchPage() {
 
   const handleSelectOdds = (selection: any) => {
     console.log('Selected odds:', selection);
+    
+    // Create a bet item
+    const newBet = {
+      id: `bet-${Date.now()}`,
+      matchId: match.id,
+      sport: 'cricket',
+      match: matchTitle,
+      selection: {
+        type: selection.selection === homeTeam ? 'teamA' : 'teamB',
+        name: selection.selection
+      },
+      odds: selection.odds,
+      time: match.time || matchDate,
+      league: match.competition_name || 'IPL'
+    };
+    
+    // Add to selected bets
+    setSelectedBets(prevBets => [...prevBets, newBet]);
+    
+    // Force open the betslip immediately
     setBetslipOpen(true);
-    // In a real app, would add to betslip context
+    
+    // Show a toast notification
+    console.log(`Added ${selection.selection} @ ${selection.odds} to betslip`);
   };
 
   if (loading) {
@@ -207,6 +231,15 @@ export default function CricketMatchPage() {
                             [homeTeam]: homeOdds || 0,
                             [awayTeam]: awayOdds || 0
                           }}
+                          match={match}
+                          onSelectOdds={(team, price) => {
+                            console.log(`Selected ${team} at odds ${price}`);
+                            handleSelectOdds({
+                              selection: team,
+                              odds: price,
+                              market: 'match-winner'
+                            });
+                          }}
                         />
                       )}
                       
@@ -224,32 +257,70 @@ export default function CricketMatchPage() {
               <div className="space-y-4">
                 <UserBalanceDisplay />
                 
-                <div className={`bg-[#0f121a] rounded-lg shadow-lg overflow-hidden ${betslipOpen ? 'block' : 'hidden lg:block'}`}>
-                  <div className="p-4 bg-[#1a1f2c] border-b border-gray-700 flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-white">Betslip</h3>
-                    <button 
-                      onClick={() => setBetslipOpen(false)}
-                      className="lg:hidden text-gray-400 hover:text-white"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="p-4">
-                    <BetSlip />
+                {/* Betslip - visible on larger screens by default, toggleable on mobile */}
+                <div 
+                  className={`
+                    fixed inset-0 z-50 lg:static lg:z-auto 
+                    ${betslipOpen ? 'flex' : 'hidden lg:flex'} 
+                    flex-col lg:bg-[#0f121a] lg:rounded-lg lg:shadow-lg overflow-hidden
+                  `}
+                >
+                  {/* Mobile overlay background */}
+                  <div 
+                    className="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
+                    onClick={() => setBetslipOpen(false)}
+                  ></div>
+                  
+                  {/* Betslip container */}
+                  <div className="
+                    relative w-full max-w-md mx-auto mt-auto lg:mt-0 lg:w-auto lg:max-w-none 
+                    bg-[#0f121a] rounded-t-xl lg:rounded-lg shadow-xl lg:shadow-lg
+                    flex flex-col h-[70vh] lg:h-auto
+                  ">
+                    <div className="p-4 bg-[#1a1f2c] border-b border-gray-700 flex justify-between items-center">
+                      <h3 className="text-lg font-semibold text-white">Betslip</h3>
+                      <button 
+                        onClick={() => setBetslipOpen(false)}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="p-4 flex-1 overflow-auto">
+                      <MatchBetSlip 
+                        bets={selectedBets}
+                        onRemoveBet={(betId) => {
+                          setSelectedBets(prev => prev.filter(bet => bet.id !== betId));
+                        }}
+                        onClearAll={() => {
+                          setSelectedBets([]);
+                        }}
+                        onPlaceBet={() => {
+                          alert('Bet placed successfully!');
+                          setSelectedBets([]);
+                          setBetslipOpen(false);
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
                 
-                {/* Mobile betslip button */}
-                <div className="fixed bottom-4 right-4 lg:hidden z-10">
+                {/* Mobile betslip button - fixed at bottom right */}
+                <div className={`fixed bottom-4 right-4 lg:hidden z-10 ${betslipOpen ? 'hidden' : 'block'}`}>
                   <button 
                     onClick={() => setBetslipOpen(true)}
-                    className="bg-purple-600 text-white p-3 rounded-full shadow-lg hover:bg-purple-700 transition-colors"
+                    className="bg-purple-600 text-white p-3 rounded-full shadow-lg hover:bg-purple-700 transition-colors relative"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
+                    {selectedBets.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                        {selectedBets.length}
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
