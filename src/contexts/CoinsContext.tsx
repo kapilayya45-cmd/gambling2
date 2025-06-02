@@ -1,20 +1,22 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/firebase/config';
 
 // Define the context shape
 interface CoinsContextType {
   coinsBalance: number;
-  updateCoinsBalance: (newBalance: number) => void;
-  deductCoins: (amount: number) => void;
-  addCoins: (amount: number) => void;
+  updateCoinsBalance: (newBalance: number) => Promise<void>;
+  deductCoins: (amount: number) => Promise<void>;
+  addCoins: (amount: number) => Promise<void>;
 }
 
 // Create context with default values
 const CoinsContext = createContext<CoinsContextType>({
   coinsBalance: 0,
-  updateCoinsBalance: () => {},
-  deductCoins: () => {},
-  addCoins: () => {}
+  updateCoinsBalance: async () => {},
+  deductCoins: async () => {},
+  addCoins: async () => {}
 });
 
 // Hook for using the context
@@ -26,25 +28,71 @@ export const CoinsProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [coinsBalance, setCoinsBalance] = useState<number>(0);
   
   // Get the auth context to access the user's real coin balance
-  const auth = useAuth();
+  const { currentUser, coinBalance } = useAuth();
   
   // Sync with the auth context coin balance
   useEffect(() => {
-    if (auth && auth.coinBalance !== undefined) {
-      setCoinsBalance(auth.coinBalance);
+    if (coinBalance !== undefined) {
+      setCoinsBalance(coinBalance);
     }
-  }, [auth, auth.coinBalance]);
+  }, [coinBalance]);
 
-  const updateCoinsBalance = (newBalance: number) => {
-    setCoinsBalance(newBalance);
+  const updateCoinsBalance = async (newBalance: number) => {
+    if (!currentUser) return;
+    
+    try {
+      // Update in Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        coinBalance: newBalance
+      });
+      
+      // Update local state
+      setCoinsBalance(newBalance);
+    } catch (error) {
+      console.error('Error updating coin balance:', error);
+      throw error;
+    }
   };
 
-  const deductCoins = (amount: number) => {
-    setCoinsBalance(prev => Math.max(0, prev - amount));
+  const deductCoins = async (amount: number) => {
+    if (!currentUser) return;
+    
+    try {
+      const newBalance = Math.max(0, coinsBalance - amount);
+      
+      // Update in Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        coinBalance: newBalance
+      });
+      
+      // Update local state
+      setCoinsBalance(newBalance);
+    } catch (error) {
+      console.error('Error deducting coins:', error);
+      throw error;
+    }
   };
 
-  const addCoins = (amount: number) => {
-    setCoinsBalance(prev => prev + amount);
+  const addCoins = async (amount: number) => {
+    if (!currentUser) return;
+    
+    try {
+      const newBalance = coinsBalance + amount;
+      
+      // Update in Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        coinBalance: newBalance
+      });
+      
+      // Update local state
+      setCoinsBalance(newBalance);
+    } catch (error) {
+      console.error('Error adding coins:', error);
+      throw error;
+    }
   };
 
   return (

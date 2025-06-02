@@ -535,7 +535,7 @@ const Sidebar: React.FC = () => {
   }, []);
 
   return (
-    <aside className="w-60 bg-white h-full overflow-y-auto hidden md:block shadow-lg">
+    <aside className="w-60 min-w-[240px] bg-white h-full overflow-y-auto hidden md:block shadow-lg">
       {/* User Profile Area */}
       <div
         className="flex items-center px-4 py-5 border-b border-gray-200 hover:bg-gray-100 cursor-pointer"

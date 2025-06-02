@@ -3,7 +3,7 @@ import InlineBetEntryFixed from './InlineBetEntryFixed';
 import { BettingMarket } from './MarketTabs';
 
 interface BettingOddsCardProps {
-  onPlaceBet?: (team: string, odds: number) => void;
+  onPlaceBet?: (team: string, odds: number, stake: number) => void;
 }
 
 /**
@@ -84,11 +84,11 @@ const BettingOddsCard: React.FC<BettingOddsCardProps> = ({ onPlaceBet }) => {
   const handleSelectBet = (team: string, odds: number) => {
     setSelectedBet({ team, odds });
   };
-
+  
   // Handle bet placement
   const handlePlaceBet = (betData: { selection: string; market: BettingMarket; side: "back" | "lay"; odds: number; stake: number; payWith: "wallet" | "coins"; }) => {
     if (selectedBet && onPlaceBet) {
-      onPlaceBet(selectedBet.team, selectedBet.odds);
+      onPlaceBet(selectedBet.team, selectedBet.odds, betData.stake);
     }
     setSelectedBet(null);
   };

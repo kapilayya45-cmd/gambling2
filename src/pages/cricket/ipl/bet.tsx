@@ -227,6 +227,9 @@ export default function IPLBetsPage() {
       // Construct proper match name
       const matchName = `${selectedMatch.localteam_name} vs ${selectedMatch.visitorteam_name}`;
       
+      // Deduct coins first
+      await deductCoins(selection.stake);
+      
       // Record the bet in Firestore so it appears in live bets
       await recordBet(currentUser.uid, {
         matchId: selection.matchId,
@@ -248,9 +251,6 @@ export default function IPLBetsPage() {
       };
       
       setPlacedBets([...placedBets, placedBet]);
-      
-      // Deduct coins
-      deductCoins(selection.stake);
       
       // Show a success message
       alert(`Bet placed successfully on ${selection.selection} for ₹${selection.stake}`);
@@ -452,7 +452,7 @@ export default function IPLBetsPage() {
                 
                 {selectedMarket === 'match-winner' ? (
                   <BettingOddsCard 
-                    onPlaceBet={(team, odds) => {
+                    onPlaceBet={(team, odds, stake) => {
                       // Create a bet selection object
                       const selection: BetSelection = {
                         selectionId: team === 'Royal Challengers Bengaluru' ? '67868736' : '38528100',
@@ -462,7 +462,7 @@ export default function IPLBetsPage() {
                         market: 'match-winner',
                         odds: odds,
                         side: 'back',
-                        stake: 100 // Default stake
+                        stake: stake // Use the actual stake from the form
                       };
                       handlePlaceBet(selection);
                     }} 

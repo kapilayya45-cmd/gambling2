@@ -7,8 +7,9 @@ interface BetCardProps {
   stake: number;
   potentialWin: number;
   status: 'live' | 'settled' | 'cashout';
-  onCashOut?: (betId: string) => void;
+  onCancelBet?: (betId: string) => void;
   betId: string;
+  createdAt?: string;
 }
 
 const BetCard: React.FC<BetCardProps> = ({
@@ -18,55 +19,72 @@ const BetCard: React.FC<BetCardProps> = ({
   stake,
   potentialWin,
   status,
-  onCashOut,
-  betId
+  onCancelBet,
+  betId,
+  createdAt
 }) => {
-  const handleCashOut = () => {
-    if (onCashOut && status === 'live') {
-      onCashOut(betId);
+  const handleCancelBet = () => {
+    if (onCancelBet && status === 'live') {
+      onCancelBet(betId);
     }
   };
 
+  // Format the date nicely
+  const formattedDate = createdAt ? new Date(createdAt).toLocaleString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }) : '';
+
   return (
-    <div className="min-w-[270px] bg-[#1a1f2c] rounded-lg p-4 flex-shrink-0">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-sm font-medium text-purple-400">
-          {status === 'live' ? 'LIVE' : status === 'settled' ? 'SETTLED' : 'CASH OUT'}
+    <div className="min-w-[270px] bg-white rounded-lg p-4 flex-shrink-0 border border-gray-200">
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-sm font-medium text-purple-600">
+          {status === 'live' ? 'LIVE' : status === 'settled' ? 'SETTLED' : 'CANCELLED'}
         </span>
-        <span className="text-xs text-gray-400">Bet #{betId.substring(0, 8)}</span>
+        <span className="text-sm text-gray-500">Bet #{betId.substring(0, 8)}</span>
       </div>
-      
-      <h3 className="font-medium mb-2 text-white">{match}</h3>
-      <div className="text-sm text-gray-300 mb-3">
-        Selection: <span className="text-white font-medium">{selection}</span>
+
+      <div className="mb-4">
+        <div className="text-gray-500 mb-1">Selection:</div>
+        <div className="text-gray-900">{selection}</div>
       </div>
-      
-      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-        <div className="bg-[#2a3040] rounded p-2">
-          <span className="block text-gray-400">Odds</span>
-          <span className="text-white font-medium">{odds.toFixed(2)}</span>
-        </div>
-        <div className="bg-[#2a3040] rounded p-2">
-          <span className="block text-gray-400">Stake</span>
-          <span className="text-white font-medium">₹{stake.toFixed(2)}</span>
-        </div>
-      </div>
-      
-      <div className="flex justify-between items-center">
+
+      <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <span className="block text-xs text-gray-400">Potential Win</span>
-          <span className="text-green-400 font-medium">₹{potentialWin.toFixed(2)}</span>
+          <div className="text-gray-500 mb-1">Odds</div>
+          <div className="text-gray-900">{odds.toFixed(2)}</div>
         </div>
-        
-        {status === 'live' && onCashOut && (
+        <div>
+          <div className="text-gray-500 mb-1">Stake</div>
+          <div className="text-gray-900">₹{stake.toLocaleString()}</div>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <div className="text-gray-500 mb-1">Potential Win</div>
+          <div className="text-green-600">₹{potentialWin.toFixed(2)}</div>
+        </div>
+        {status === 'live' && onCancelBet && (
           <button 
-            onClick={handleCashOut}
-            className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1.5 rounded transition-colors"
+            onClick={handleCancelBet}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
           >
-            Cash Out
+            Cancel Bet
           </button>
         )}
       </div>
+
+      {createdAt && (
+        <div className="text-sm text-gray-500">
+          Placed: {formattedDate}
+        </div>
+      )}
     </div>
   );
 };

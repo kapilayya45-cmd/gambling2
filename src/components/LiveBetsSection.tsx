@@ -23,10 +23,10 @@ interface MatchBet {
 }
 
 interface LiveBetsSectionProps {
-  onCashOut: (betId: string) => void;
+  onCancelBet: (betId: string) => void;
 }
 
-const LiveBetsSection: React.FC<LiveBetsSectionProps> = ({ onCashOut }) => {
+const LiveBetsSection: React.FC<LiveBetsSectionProps> = ({ onCancelBet }) => {
   const [liveBets, setLiveBets] = useState<MatchBet[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,10 +140,10 @@ const LiveBetsSection: React.FC<LiveBetsSectionProps> = ({ onCashOut }) => {
 
   if (loading) {
     return (
-      <div className="overflow-x-auto pb-4">
-        <div className="flex space-x-4">
+      <div className="overflow-x-auto">
+        <div className="flex space-x-6">
           {[1, 2, 3].map(i => (
-            <div key={i} className="flex items-center justify-center min-w-[270px] h-[200px] bg-[#2a3040] rounded-lg flex-shrink-0">
+            <div key={i} className="flex items-center justify-center min-w-[270px] h-[200px] bg-gray-100 rounded-lg flex-shrink-0">
               <div className="animate-spin h-8 w-8 border-4 border-purple-600 rounded-full border-t-transparent"></div>
             </div>
           ))}
@@ -154,7 +154,7 @@ const LiveBetsSection: React.FC<LiveBetsSectionProps> = ({ onCashOut }) => {
 
   if (error) {
     return (
-      <div className="bg-red-900/20 text-red-400 p-4 rounded-lg flex items-center">
+      <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
@@ -165,7 +165,7 @@ const LiveBetsSection: React.FC<LiveBetsSectionProps> = ({ onCashOut }) => {
 
   if (liveBets.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-5 text-center border border-gray-200 shadow">
+      <div className="bg-white rounded-lg p-5 text-center border border-gray-200">
         <p className="text-gray-500">No live bets at the moment</p>
         <button 
           className="mt-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition-colors"
@@ -178,8 +178,8 @@ const LiveBetsSection: React.FC<LiveBetsSectionProps> = ({ onCashOut }) => {
   }
 
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="flex space-x-4">
+    <div className="overflow-x-auto">
+      <div className="flex space-x-6">
         {liveBets.map(bet => (
           <MemoizedBetCard
             key={bet.id}
@@ -190,7 +190,8 @@ const LiveBetsSection: React.FC<LiveBetsSectionProps> = ({ onCashOut }) => {
             stake={bet.stake}
             potentialWin={bet.potentialWin}
             status={bet.status}
-            onCashOut={onCashOut}
+            onCancelBet={onCancelBet}
+            createdAt={bet.createdAt}
           />
         ))}
       </div>
