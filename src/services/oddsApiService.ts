@@ -3,6 +3,7 @@
 import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 import { ODDS_API, ENDPOINTS, MARKETS, DEFAULT_PARAMS, IPL_CONFIG } from '@/config/oddsApiConfig';
 import { Match, LiveScore, CompatibleMatch } from '@/types/oddsApiTypes';
+import { convertToIST } from '@/utils/dateUtils';
 
 // Cache storage
 const API_CACHE = {
@@ -101,9 +102,12 @@ const convertToCompatibleFormat = (
   match: Match,
   liveData?: LiveScore
 ): CompatibleMatch => {
-  const start = new Date(match.commence_time);
-  const [dateStr, timeStr] = start.toISOString().split('T');
-  const time = timeStr.substring(0, 8);
+  // Convert GMT start time to IST
+  const gmtStart = new Date(match.commence_time);
+  const { date: dateStr, time } = convertToIST(
+    gmtStart.toISOString().split('T')[0],
+    gmtStart.toISOString().split('T')[1].substring(0, 8)
+  );
 
   const homeScore = liveData?.scores?.home?.score ?? '';
   const awayScore = liveData?.scores?.away?.score ?? '';
@@ -457,9 +461,8 @@ function createFallbackMatches(): CompatibleMatch[] {
     'Lucknow Super Giants': 'LSG'
   };
 
-  // Use the fixed date from the API for the main match - June 3, 2025
-  const matchDate = "2025-06-03";
-  const matchTime = "14:00:00";
+  // Convert GMT time to IST for the main match - June 3, 2025
+  const { date: matchDate, time: matchTime } = convertToIST('2025-06-03', '14:00:00'); // 14:00 GMT = 19:30 IST
   
   // Create today's date for completed match
   const today = new Date();

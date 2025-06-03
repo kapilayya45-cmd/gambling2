@@ -14,6 +14,7 @@ import TimeRemainingCountdown from '@/components/cricket/TimeRemainingCountdown'
 import { useAuth } from '@/contexts/AuthContext';
 import { useCoins } from '@/contexts/CoinsContext';
 import { recordBet } from '@/services/betService';
+import { formatDate, formatTime } from '@/utils/dateUtils';
 
 // Interface for bet selection
 interface BetSelection {
@@ -365,9 +366,8 @@ export default function IPLBetsPage() {
                       {getTeamName(match.localteam_id, match)} vs {getTeamName(match.visitorteam_id, match)}
                     </div>
                     <div className="text-sm text-gray-500 mt-1">
-                      {new Date(`${match.date}T${match.time}`).toLocaleDateString()} - {match.venue_name || 'TBD'}
+                      {formatDate(match.date)} • {formatTime(match.time)} at {match.venue_name || 'TBD'}
                     </div>
-                    {/* Add time remaining indicator */}
                     <div className="mt-2">
                       <TimeRemainingCountdown 
                         matchDate={match.date} 
@@ -400,10 +400,9 @@ export default function IPLBetsPage() {
                   {getTeamName(selectedMatch.localteam_id, selectedMatch)} vs {getTeamName(selectedMatch.visitorteam_id, selectedMatch)}
                 </h1>
                 <div className="text-gray-600">
-                  {new Date(`${selectedMatch.date}T${selectedMatch.time}`).toLocaleString()} at {selectedMatch.venue_name || 'TBD'}
+                  {formatDate(selectedMatch.date)} • {formatTime(selectedMatch.time)} at {selectedMatch.venue_name || 'TBD'}
                 </div>
                 
-                {/* Add time remaining countdown for the selected match */}
                 <div className="mt-3 mb-3">
                   <TimeRemainingCountdown 
                     matchDate={selectedMatch.date} 

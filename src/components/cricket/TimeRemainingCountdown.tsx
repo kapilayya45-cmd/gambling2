@@ -80,7 +80,7 @@ const TimeRemainingCountdown: React.FC<TimeRemainingCountdownProps> = ({
     // Function to calculate time remaining
     const calculateTimeRemaining = () => {
       // Create a date object from the match time
-      const matchDateTime = new Date(`${matchDate}T${matchTime}`);
+      const matchDateTime = new Date(`${matchDate}T${matchTime}Z`); // Add Z to indicate UTC/GMT
       const now = new Date();
       
       // Calculate the difference in milliseconds
