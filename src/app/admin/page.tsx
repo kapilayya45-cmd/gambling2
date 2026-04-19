@@ -1,85 +1,63 @@
 "use client";
+
 import React, { useState } from 'react';
 
-export default function AdminDashboard() {
-  // డెమో డేటా - నిజానికి ఇవి డేటాబేస్ నుండి రావాలి
-  const [users, setUsers] = useState([
-    { id: 1, name: "Suresh", email: "suresh@mail.com", points: 500 },
-    { id: 2, name: "Ramesh", email: "ramesh@mail.com", points: 1200 },
+export default function AdminWalletPage() {
+  const [requests, setRequests] = useState([
+    { id: 1, user: "User_101", type: "Deposit", amount: 1000, utr: "123456789", status: "Pending" },
+    { id: 2, user: "User_205", type: "Withdraw", amount: 500, utr: "-", status: "Pending" },
   ]);
 
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [addAmount, setAddAmount] = useState(0);
-
-  // పాయింట్స్ యాడ్ చేసే ఫంక్షన్
-  const updatePoints = () => {
-    if (!selectedUser) return alert("యూజర్‌ను సెలెక్ట్ చేయండి!");
-    
-    const updatedUsers = users.map(u => {
-      if (u.id === selectedUser.id) {
-        return { ...u, points: u.points + Number(addAmount) };
-      }
-      return u;
-    });
-    
-    setUsers(updatedUsers);
-    alert(`${addAmount} పాయింట్స్ యాడ్ చేయబడ్డాయి!`);
-    setSelectedUser(null);
-    setAddAmount(0);
+  const handleStatus = (id: number, newStatus: string) => {
+    setRequests(requests.map(req => req.id === id ? { ...req, status: newStatus } : req));
   };
 
   return (
-    <div style={{ padding: '30px', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
-      <h1 style={{ color: '#2c3e50' }}>🏰 Manshon Admin - Wallet Manager</h1>
-      
-      {/* పాయింట్స్ యాడ్ చేసే సెక్షన్ */}
-      <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', marginBottom: '30px' }}>
-        <h2 style={{ fontSize: '18px' }}>Add Points to User</h2>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-          <select 
-            onChange={(e) => setSelectedUser(users.find(u => u.id === Number(e.target.value)))}
-            style={{ padding: '10px', borderRadius: '5px', border: '1px solid #ccc', flex: 1 }}
-          >
-            <option value="">Select User</option>
-            {users.map(u => <option key={u.id} value={u.id}>{u.name} (Bal: {u.points})</option>)}
-          </select>
-          <input 
-            type="number" 
-            placeholder="Amount" 
-            value={addAmount}
-            onChange={(e) => setAddAmount(Number(e.target.value))}
-            style={{ padding: '10px', borderRadius: '5px', border: '1px solid #ccc', width: '100px' }}
-          />
-          <button 
-            onClick={updatePoints}
-            style={{ backgroundColor: '#27ae60', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' }}
-          >
-            Add Points
-          </button>
-        </div>
-      </div>
-
-      {/* యూజర్ లిస్ట్ టేబుల్ */}
-      <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ fontSize: '18px', marginBottom: '15px' }}>User Management</h2>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#ecf0f1', textAlign: 'left' }}>
-              <th style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>Name</th>
-              <th style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>Email</th>
-              <th style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>Wallet Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.id}>
-                <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{user.name}</td>
-                <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{user.email}</td>
-                <td style={{ padding: '12px', borderBottom: '1px solid #eee', fontWeight: 'bold', color: '#2980b9' }}>{user.points} pts</td>
+    <div style={{ padding: '30px', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <h1 style={{ color: '#1e293b', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>🏦 Admin Wallet Requests</h1>
+        
+        <div style={{ marginTop: '20px', backgroundColor: '#fff', borderRadius: '10px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#1e293b', color: '#fff', textAlign: 'left' }}>
+                <th style={{ padding: '15px' }}>User ID</th>
+                <th style={{ padding: '15px' }}>Type</th>
+                <th style={{ padding: '15px' }}>Amount</th>
+                <th style={{ padding: '15px' }}>Details (UTR)</th>
+                <th style={{ padding: '15px' }}>Status</th>
+                <th style={{ padding: '15px' }}>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {requests.map((req) => (
+                <tr key={req.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '15px' }}>{req.user}</td>
+                  <td style={{ padding: '15px', color: req.type === 'Deposit' ? '#16a34a' : '#dc2626', fontWeight: 'bold' }}>{req.type}</td>
+                  <td style={{ padding: '15px', fontWeight: 'bold' }}>₹{req.amount}</td>
+                  <td style={{ padding: '15px', color: '#64748b', fontSize: '13px' }}>{req.utr}</td>
+                  <td style={{ padding: '15px' }}>
+                    <span style={{ 
+                      padding: '5px 10px', borderRadius: '20px', fontSize: '12px',
+                      backgroundColor: req.status === 'Pending' ? '#fef3c7' : req.status === 'Approved' ? '#dcfce7' : '#fee2e2',
+                      color: req.status === 'Pending' ? '#92400e' : req.status === 'Approved' ? '#166534' : '#991b1b'
+                    }}>
+                      {req.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: '15px' }}>
+                    {req.status === 'Pending' && (
+                      <div style={{ display: 'flex', gap: '5px' }}>
+                        <button onClick={() => handleStatus(req.id, "Approved")} style={{ backgroundColor: '#22c55e', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}>Approve</button>
+                        <button onClick={() => handleStatus(req.id, "Rejected")} style={{ backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}>Reject</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
