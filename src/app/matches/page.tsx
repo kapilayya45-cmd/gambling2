@@ -7,7 +7,7 @@ export default function TournamentSchedules() {
   const [loading, setLoading] = useState(true);
 
   const fetchSchedules = async () => {
-    const url = 'https://cricketapi12.p.rapidapi.com/api/cricket/tournament/11160/schedules/15/11/2024';
+    const url = ' https://allsportsapi2.p.rapidapi.com/api/tournament/17/season/76986/statistics/info \';
     const options = {
       method: 'GET',
       headers: {
